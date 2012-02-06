@@ -5,7 +5,14 @@ title: Hello World!
 {% include JB/setup %}
 
 
-## Welcome to my blog, and creative outlet.
+## Welcome to a creative outlet. (blog) of Christopher de Beer
+
+This is my blog, which runs on the Jekyll blogging engine - I havnt used it before, so I'm hoping for the best. I'll be doing my damn'dest to post regularly about the projects I'm workin on. Both as a means of adding value (I hope) to the thriving Open Source Community as well as providing a critical introspection on my own projects for my own sake.
+
+I look forward to enaging anyone who happens upon this site, and in so doing improving the quality of my own work.
+
+Regards,
+Christopher
 
     
 ## Posts so far
