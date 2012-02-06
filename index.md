@@ -11,7 +11,7 @@ This is my blog, which runs on the Jekyll blogging engine - I havnt used it befo
 
 I look forward to enaging anyone who happens upon this site, and in so doing improving the quality of my own work.
 
-<script src="https://gist.github.com/1752529.js?file=bio.json"></script>
+<script src="https://gist.github.com/1752529.js?file=bio.json" type="text/javascript"></script>
 
 You can follow me on twitter at [@christopherdb](http://twitter.com/christopherdb). I'm also on [GitHub](http://github.com/christopherdebeer), on [StackOverflow](http://stackoverflow.com/users/371040/christopher), on [Dribbble](http://dribbble.com/christopherdebeer), &amp; on [FFFFound](http://ffffound.com/home/barumunk/found/).
 
