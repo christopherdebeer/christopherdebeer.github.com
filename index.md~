@@ -11,6 +11,8 @@ This is my blog, which runs on the Jekyll blogging engine - I havnt used it befo
 
 I look forward to enaging anyone who happens upon this site, and in so doing improving the quality of my own work.
 
+You can follow me on twitter at [@christopherdb](http://twitter.com/christopherdb), on [GitHub](http://github.com/christopherdebeer), on [StackOverflow](http://stackoverflow.com/users/371040/christopher), on [Dribdbble](http://dribbble.com/christopherdebeer), or on [FFFFound](http://ffffound.com/home/barumunk/found/).
+
 Regards,
 Christopher
 
