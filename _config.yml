@@ -9,8 +9,8 @@ pygments: true
 # Themes are encouraged to use these universal variables 
 # so be sure to set them if your theme uses them.
 #
-title : I am Bot 
-tagline: the blog of Christopher de Beer
+title : ~
+tagline: Citizen of the web
 author :
   name : Christopher de Beer
   email : christopherdebeer@gmail.com
