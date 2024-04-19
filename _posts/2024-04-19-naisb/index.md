@@ -6,7 +6,7 @@ tags: ["images"]
 ---
 {% include JB/setup %}
 
-![naisb](./IMG_9978.jpeg
+![naisb](./IMG_9978.jpeg)
 
 The duality of perfection, specifically excellence, in a craft or domain. Where both extremes are of equal calibre and nothing without the other.
 
