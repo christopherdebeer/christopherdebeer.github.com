@@ -1,6 +1,6 @@
 ---
 layout: post
-category : basic 
+category : 2012 
 tags : [jekyll, blogging, github]
 ---
 {% include JB/setup %}
