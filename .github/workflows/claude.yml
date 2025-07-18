@@ -37,7 +37,7 @@ jobs:
           # Or use OAuth token instead:
           # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           timeout_minutes: "30"
-          allowed_tools: "Bash(npm:*),Bash(git:*)" # Allows only npm and git commands
+          allowed_tools: "Bash(npm:*),Bash(git:*),Bash(exec:*),Bash(grep:*),Bash(bun:*),Bash(ls:*),Bash(node:*),Bash(cat:*),Bash(cd:*)"
           # Optional: Restrict network access to specific domains only
           # experimental_allowed_domains: |
           #   .anthropic.com
