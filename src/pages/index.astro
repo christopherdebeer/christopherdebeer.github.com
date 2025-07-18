@@ -9,8 +9,11 @@ import Layout from '../layouts/Layout.astro';
 			Citizen of the web - A clean, modern blog built with Astro
 		</p>
 		<p>
-			<strong>Migration in progress:</strong> Converting from Jekyll-Bootstrap to Astro for a cleaner markdown workflow.
+			Explore my thoughts on web development, JavaScript frameworks, and various projects.
 		</p>
+		<nav class="main-nav">
+			<a href="/blog/" class="nav-link">View Blog Posts</a>
+		</nav>
 	</main>
 </Layout>
 
@@ -37,5 +40,25 @@ import Layout from '../layouts/Layout.astro';
 		line-height: 1;
 		text-align: center;
 		margin-bottom: 1em;
+	}
+	.main-nav {
+		text-align: center;
+		margin-top: 2rem;
+	}
+	.nav-link {
+		display: inline-block;
+		padding: 1rem 2rem;
+		background: rgba(255, 255, 255, 0.1);
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-radius: 0.5rem;
+		color: white;
+		text-decoration: none;
+		font-weight: 600;
+		transition: all 0.3s ease;
+	}
+	.nav-link:hover {
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.6);
+		transform: translateY(-2px);
 	}
 </style>
