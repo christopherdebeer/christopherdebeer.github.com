@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Christopher de Beer">
+	<main>
+		<h1>Welcome to <span class="text-gradient">Christopher de Beer's Blog</span></h1>
+		<p>
+			Citizen of the web - A clean, modern blog built with Astro
+		</p>
+		<p>
+			<strong>Migration in progress:</strong> Converting from Jekyll-Bootstrap to Astro for a cleaner markdown workflow.
+		</p>
+	</main>
+</Layout>
+
+<style>
+	main {
+		margin: auto;
+		padding: 1rem;
+		width: 800px;
+		max-width: calc(100% - 2rem);
+		color: white;
+		font-size: 20px;
+		line-height: 1.6;
+	}
+	.text-gradient {
+		background-image: var(--accent-gradient);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-size: 400%;
+		background-position: 0%;
+	}
+	h1 {
+		font-size: 4rem;
+		font-weight: 700;
+		line-height: 1;
+		text-align: center;
+		margin-bottom: 1em;
+	}
+</style>
