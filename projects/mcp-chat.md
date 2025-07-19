@@ -26,6 +26,18 @@
 
 ---
 
+## Related Content
+
+This chat application experiment connects to ongoing explorations in web interfaces and AI-powered tools:
+
+- **[Exploring the websim](https://christopherdebeer.github.io/blog/2024-05-09-exploring-websim/)** - AI-powered web creation tools
+- **[contextual](https://github.com/christopherdebeer/contextual)** - Context management companion tool
+- **[app-UI](https://github.com/christopherdebeer/app-UI)** - UI components for interactive applications
+
+*Discover more experiments in the [Projects](/projects/) section.*
+
+---
+
 ## Progress Log
 
 **2025-07-19:** Initial project documentation created, identified as recent chat application exported from Val.town platform.

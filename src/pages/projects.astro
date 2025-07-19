@@ -1,0 +1,209 @@
+---
+import Layout from '../layouts/Layout.astro';
+import fs from 'fs';
+import path from 'path';
+
+// Read all project files
+const projectsDir = path.join(process.cwd(), 'projects');
+const projectFiles = fs.readdirSync(projectsDir)
+  .filter(file => file.endsWith('.md') && file !== 'README.md')
+  .map(file => {
+    const content = fs.readFileSync(path.join(projectsDir, file), 'utf-8');
+    const title = file.replace('.md', '');
+    
+    // Extract basic info from markdown
+    const lines = content.split('\n');
+    const summaryStart = lines.findIndex(line => line.includes('## Summary'));
+    const summary = summaryStart !== -1 ? lines[summaryStart + 2]?.replace(/^"|"$/g, '') || '' : '';
+    
+    // Extract GitHub link
+    const githubLine = lines.find(line => line.includes('**GitHub Source:**'));
+    const githubUrl = githubLine ? githubLine.match(/https:\/\/github\.com\/[^\s]+/)?.[0] || '' : '';
+    
+    // Extract language
+    const langLine = lines.find(line => line.includes('**Language:**'));
+    const language = langLine ? langLine.split('**Language:**')[1]?.trim() || 'Unknown' : 'Unknown';
+    
+    return {
+      title,
+      summary,
+      githubUrl,
+      language,
+      filename: file
+    };
+  })
+  .sort((a, b) => a.title.localeCompare(b.title));
+---
+
+<Layout title="Projects - Christopher de Beer">
+	<main class="content-container">
+		<header class="projects-header">
+			<h1>Projects</h1>
+			<p class="subtitle">A collection of experiments, tools, and explorations in code</p>
+			<nav class="breadcrumb">
+				<a href="/">Home</a> → <span>Projects</span>
+			</nav>
+		</header>
+		
+		<section class="projects-grid">
+			{projectFiles.map(project => (
+				<article class="project-card">
+					<div class="project-meta">
+						<span class="language-tag">{project.language}</span>
+					</div>
+					<h2 class="project-title">
+						<a href={project.githubUrl} target="_blank" rel="noopener">{project.title}</a>
+					</h2>
+					<p class="project-summary">{project.summary}</p>
+					<div class="project-links">
+						<a href={project.githubUrl} target="_blank" rel="noopener" class="github-link">
+							GitHub →
+						</a>
+					</div>
+				</article>
+			))}
+		</section>
+		
+		<footer class="projects-footer">
+			<p>All projects are open source and available on <a href="https://github.com/christopherdebeer" target="_blank">GitHub</a></p>
+		</footer>
+	</main>
+</Layout>
+
+<style>
+	.projects-header {
+		text-align: center;
+		margin-bottom: 4rem;
+		border-bottom: 1px solid var(--border);
+		padding-bottom: 2rem;
+	}
+	
+	.projects-header h1 {
+		font-size: 2.5em;
+		margin-bottom: 0.5rem;
+		font-weight: 400;
+		color: var(--text-primary);
+	}
+	
+	.subtitle {
+		font-size: 1.1em;
+		color: var(--text-secondary);
+		font-style: italic;
+		margin: 0 0 1rem 0;
+	}
+	
+	.breadcrumb {
+		font-size: 0.9em;
+		color: var(--text-secondary);
+	}
+	
+	.breadcrumb a {
+		color: var(--accent);
+		text-decoration: none;
+	}
+	
+	.breadcrumb a:hover {
+		text-decoration: underline;
+	}
+	
+	.projects-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 2rem;
+		margin-bottom: 3rem;
+	}
+	
+	.project-card {
+		border: 1px solid var(--border);
+		padding: 1.5rem;
+		background: var(--background-subtle);
+		transition: border-color 0.2s ease;
+	}
+	
+	.project-card:hover {
+		border-color: var(--accent);
+	}
+	
+	.project-meta {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 1rem;
+	}
+	
+	.language-tag {
+		background: var(--accent);
+		color: white;
+		padding: 0.2rem 0.6rem;
+		border-radius: 12px;
+		font-size: 0.8em;
+		font-weight: 500;
+	}
+	
+	.project-title {
+		font-size: 1.3em;
+		margin: 0 0 1rem 0;
+		font-weight: 500;
+	}
+	
+	.project-title a {
+		color: var(--text-primary);
+		text-decoration: none;
+	}
+	
+	.project-title a:hover {
+		color: var(--accent);
+	}
+	
+	.project-summary {
+		color: var(--text-secondary);
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+	}
+	
+	.project-links {
+		display: flex;
+		justify-content: flex-end;
+	}
+	
+	.github-link {
+		color: var(--accent);
+		text-decoration: none;
+		font-weight: 500;
+		font-size: 0.9em;
+	}
+	
+	.github-link:hover {
+		text-decoration: underline;
+	}
+	
+	.projects-footer {
+		text-align: center;
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
+		color: var(--text-secondary);
+	}
+	
+	.projects-footer a {
+		color: var(--accent);
+		text-decoration: none;
+	}
+	
+	.projects-footer a:hover {
+		text-decoration: underline;
+	}
+	
+	@media (max-width: 768px) {
+		.projects-grid {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+		
+		.project-card {
+			padding: 1.25rem;
+		}
+		
+		.projects-header h1 {
+			font-size: 2em;
+		}
+	}
+</style>

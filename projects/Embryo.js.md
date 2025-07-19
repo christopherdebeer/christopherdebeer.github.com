@@ -24,6 +24,18 @@
 
 ---
 
+## Related Content
+
+This JavaScript framework concept connects to early explorations in web development:
+
+- **[Hello World](https://christopherdebeer.github.io/blog/2012-02-06-hello-world/)** - Early thoughts on JavaScript frameworks and the Hub.js concept
+- **[jspm-react-boilerplate](https://github.com/christopherdebeer/jspm-react-boilerplate)** - Another JavaScript framework experiment
+- **[Ejecta](https://github.com/christopherdebeer/Ejecta)** - Bridging JavaScript with native iOS performance
+
+*Browse more articles in the [Blog](/blog/) section.*
+
+---
+
 ## Progress Log
 
 **2025-07-19:** Initial project documentation created, identified as embryonic programming framework in JavaScript.

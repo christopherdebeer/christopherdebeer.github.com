@@ -26,6 +26,18 @@
 
 ---
 
+## Related Content
+
+This context management tool is part of a suite of recent AI and web-focused experiments:
+
+- **[Exploring the websim](https://christopherdebeer.github.io/blog/2024-05-09-exploring-websim/)** - AI-powered web creation exploration  
+- **[mcp-chat](https://github.com/christopherdebeer/mcp-chat)** - Chat application for real-time interactions
+- **[app-UI](https://github.com/christopherdebeer/app-UI)** - Interface components for context-aware applications
+
+*See related thinking in the [Blog](/blog/) section.*
+
+---
+
 ## Progress Log
 
 **2025-07-19:** Initial project documentation created, identified as recent context management tool exported from Val.town platform.

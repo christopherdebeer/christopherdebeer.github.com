@@ -10,11 +10,13 @@ import Layout from '../layouts/Layout.astro';
 		</header>
 		
 		<section class="description">
-			<p>Welcome to my blog, where I share thoughts on web development, JavaScript frameworks, and various projects. This site follows the design principles of Edward Tufte, emphasizing clean typography and readability.</p>
+			<p>Welcome to my digital space, where I share thoughts on web development, JavaScript frameworks, and document my various projects. This site follows the design principles of Edward Tufte, emphasizing clean typography and readability.</p>
 		</section>
 		
 		<nav class="main-nav">
 			<a href="/blog/" class="nav-link">Read Articles</a>
+			<a href="/projects/" class="nav-link">View Projects</a>
+			<a href="/tags/" class="nav-link">Browse Topics</a>
 		</nav>
 	</main>
 </Layout>
@@ -54,6 +56,10 @@ import Layout from '../layouts/Layout.astro';
 	.main-nav {
 		text-align: center;
 		margin-top: 2rem;
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
+		flex-wrap: wrap;
 	}
 	
 	.nav-link {
@@ -66,6 +72,7 @@ import Layout from '../layouts/Layout.astro';
 		font-weight: 400;
 		transition: all 0.2s ease;
 		border-radius: 2px;
+		min-width: 140px;
 	}
 	
 	.nav-link:hover {
