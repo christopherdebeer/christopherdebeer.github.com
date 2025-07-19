@@ -9,7 +9,7 @@ const sortedPosts = allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.
 
 <Layout title="Blog - Christopher de Beer">
   <main>
-    <div class="container">
+    <div class="content-container">
       <header>
         <h1>Blog</h1>
         <p>Thoughts, projects, and explorations</p>
@@ -46,94 +46,102 @@ const sortedPosts = allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.
 </Layout>
 
 <style>
-  .container {
-    max-width: 65ch;
-    margin: 0 auto;
-    padding: 1rem;
-  }
-
   header {
     margin-bottom: 3rem;
     text-align: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2rem;
   }
 
   h1 {
-    font-size: 2.5rem;
+    font-size: 2.5em;
     margin-bottom: 0.5rem;
-    color: #1a1a1a;
+    color: var(--text-primary);
+    font-weight: 400;
   }
 
   header p {
-    font-size: 1.1rem;
-    color: #666;
+    font-size: 1.1em;
+    color: var(--text-secondary);
     margin: 0;
+    font-style: italic;
   }
 
   .posts {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 2.5rem;
   }
 
   .post-preview {
     padding-bottom: 2rem;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--border-light);
   }
 
   .post-preview:last-child {
     border-bottom: none;
+    padding-bottom: 0;
   }
 
   .post-preview h2 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.5rem;
+    margin: 0 0 0.8rem 0;
+    font-size: 1.5em;
+    font-weight: 400;
   }
 
   .post-preview h2 a {
-    color: #1a1a1a;
+    color: var(--text-primary);
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.15s ease;
   }
 
   .post-preview h2 a:hover {
-    color: #0066cc;
+    color: var(--accent);
   }
 
   time {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 0.9em;
+    color: var(--text-secondary);
     display: block;
     margin-bottom: 1rem;
+    font-weight: 400;
   }
 
   .description {
-    color: #555;
-    line-height: 1.5;
+    color: var(--text-primary);
+    line-height: 1.6;
     margin: 1rem 0;
+    font-size: 1em;
   }
 
   .tags {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    margin-top: 1rem;
   }
 
   .tag {
-    background: #f0f0f0;
-    color: #555;
-    padding: 0.2rem 0.6rem;
-    border-radius: 0.25rem;
-    font-size: 0.8rem;
-    font-weight: 500;
+    background: var(--background-subtle);
+    color: var(--text-secondary);
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border-light);
+    border-radius: 2px;
+    font-size: 0.85em;
+    font-weight: 400;
   }
 
   @media (max-width: 768px) {
-    .container {
-      padding: 1rem 0.5rem;
-    }
-
     h1 {
-      font-size: 2rem;
+      font-size: 2em;
+    }
+    
+    header p {
+      font-size: 1em;
+    }
+    
+    .posts {
+      gap: 2rem;
     }
   }
 </style>
