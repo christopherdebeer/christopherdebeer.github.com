@@ -84,7 +84,7 @@ const sortedProjectThemes = new Map([...projectThemes.entries()].sort());
           <div class="tag-group">
             <h3 class="tag-name">#{tag}</h3>
             <ul class="tag-posts">
-              {posts.map(post => (
+              {posts.map((post: {title: string, slug: string, type: string}) => (
                 <li>
                   <a href={`/blog/${post.slug}/`}>{post.title}</a>
                 </li>
@@ -102,7 +102,7 @@ const sortedProjectThemes = new Map([...projectThemes.entries()].sort());
           <div class="theme-group">
             <h3 class="theme-name">{theme.replace('-', ' & ')}</h3>
             <ul class="theme-items">
-              {items.map(item => (
+              {items.map((item: {title: string, type: string, description: string}) => (
                 <li>
                   {item.type === 'project' ? (
                     <span>
