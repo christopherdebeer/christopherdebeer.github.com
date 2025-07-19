@@ -37,7 +37,7 @@ jobs:
           # Or use OAuth token instead:
           # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           timeout_minutes: "30"
-          allowed_tools: "Read,Write,Webfetch,mcp__github__list_repos,mcp__github__get_repo,Bash(npm:*),Bash(git:*),Bash(exec:*),Bash(grep:*),Bash(bun:*),Bash(ls:*),Bash(node:*),Bash(cat:*),Bash(cd:*),Bash(cp:*),Bash(mv:*),Bash(mkdir:*),Bash(rm:*)"
+          allowed_tools: "Read,Write,WebFetch,mcp__github__list_repos,mcp__github__get_repo,Bash(npm:*),Bash(git:*),Bash(exec:*),Bash(grep:*),Bash(bun:*),Bash(ls:*),Bash(node:*),Bash(cat:*),Bash(cd:*),Bash(cp:*),Bash(mv:*),Bash(mkdir:*),Bash(rm:*),Bash(curl:*)"
           # Optional: Restrict network access to specific domains only
           # experimental_allowed_domains: |
           #   .anthropic.com
