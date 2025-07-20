@@ -52,13 +52,18 @@ const projectFiles = fs.readdirSync(projectsDir)
 						<span class="language-tag">{project.language}</span>
 					</div>
 					<h2 class="project-title">
-						<a href={project.githubUrl} target="_blank" rel="noopener">{project.title}</a>
+						<a href={`/projects/${project.filename.replace('.md', '')}/`}>{project.title}</a>
 					</h2>
 					<p class="project-summary">{project.summary}</p>
 					<div class="project-links">
-						<a href={project.githubUrl} target="_blank" rel="noopener" class="github-link">
-							GitHub →
+						<a href={`/projects/${project.filename.replace('.md', '')}/`} class="details-link">
+							View Details →
 						</a>
+						{project.githubUrl && (
+							<a href={project.githubUrl} target="_blank" rel="noopener" class="github-link">
+								GitHub ↗
+							</a>
+						)}
 					</div>
 				</article>
 			))}
@@ -163,8 +168,10 @@ const projectFiles = fs.readdirSync(projectsDir)
 	.project-links {
 		display: flex;
 		justify-content: flex-end;
+		gap: 1rem;
 	}
 	
+	.details-link,
 	.github-link {
 		color: var(--accent);
 		text-decoration: none;
@@ -172,8 +179,13 @@ const projectFiles = fs.readdirSync(projectsDir)
 		font-size: 0.9em;
 	}
 	
+	.details-link:hover,
 	.github-link:hover {
 		text-decoration: underline;
+	}
+	
+	.github-link {
+		color: var(--text-secondary);
 	}
 	
 	.projects-footer {

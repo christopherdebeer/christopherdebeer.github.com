@@ -1,0 +1,227 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'fs';
+import path from 'path';
+import { buildBacklinks, generateBacklinksHTML } from '../../utils/backlinks.ts';
+
+export async function getStaticPaths() {
+  const projectsDir = path.join(process.cwd(), 'projects');
+  const projectFiles = fs.readdirSync(projectsDir)
+    .filter(file => file.endsWith('.md') && file !== 'README.md');
+  
+  return projectFiles.map((file) => {
+    const filePath = path.join(projectsDir, file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const slug = file.replace('.md', '');
+    
+    // Extract title from content or filename
+    const titleMatch = content.match(/^#\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1] : slug.replace(/-/g, ' ');
+    
+    return {
+      params: { slug },
+      props: { content, title, slug },
+    };
+  });
+}
+
+const { content, title, slug } = Astro.props;
+
+// Generate backlinks for this project
+const backlinksData = buildBacklinks();
+const currentPagePath = `/projects/${slug}`;
+const backlinksHTML = generateBacklinksHTML(currentPagePath, backlinksData);
+
+// Convert markdown content to HTML (basic conversion)
+function markdownToHtml(markdown: string): string {
+  return markdown
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+    // Links
+    .replace(/\[([^\]]*)\]\(([^)]*)\)/gim, '<a href="$2">$1</a>')
+    // Line breaks
+    .replace(/\n\n/gim, '</p><p>')
+    // Wrap in paragraph tags
+    .replace(/^(?!<[h|u|s])(.*)$/gim, '<p>$1</p>')
+    // Clean up empty paragraphs
+    .replace(/<p><\/p>/gim, '')
+    // Fix nested paragraphs in headers
+    .replace(/<h([1-6])><p>(.*)<\/p><\/h[1-6]>/gim, '<h$1>$2</h$1>');
+}
+
+const htmlContent = markdownToHtml(content);
+---
+
+<Layout title={`${title} - Projects - Christopher de Beer`}>
+  <main class="content-container">
+    <article class="project">
+      <header class="project-header">
+        <nav class="breadcrumb">
+          <a href="/">Home</a> → <a href="/projects/">Projects</a> → <span>{title}</span>
+        </nav>
+        <h1>{title}</h1>
+      </header>
+      
+      <div class="project-content" set:html={htmlContent} />
+      
+      <!-- Backlinks section -->
+      {backlinksHTML && (
+        <div set:html={backlinksHTML} />
+      )}
+      
+      <footer class="project-footer">
+        <a href="/projects/" class="back-link">← Back to Projects</a>
+      </footer>
+    </article>
+  </main>
+</Layout>
+
+<style>
+  .project {
+    margin-top: 1rem;
+  }
+
+  .project-header {
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .project-header h1 {
+    font-size: 2.5em;
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.2;
+    font-weight: 400;
+  }
+
+  .project-content {
+    line-height: 1.6;
+    font-size: 1em;
+    margin-bottom: 3rem;
+  }
+
+  .project-content :global(h1),
+  .project-content :global(h2),
+  .project-content :global(h3),
+  .project-content :global(h4) {
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 400;
+  }
+
+  .project-content :global(h1) {
+    font-size: 1.8em;
+  }
+
+  .project-content :global(h2) {
+    font-size: 1.5em;
+  }
+
+  .project-content :global(h3) {
+    font-size: 1.2em;
+  }
+
+  .project-content :global(p) {
+    margin-bottom: 1.3em;
+  }
+
+  .project-content :global(a) {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s ease;
+  }
+
+  .project-content :global(a:hover) {
+    border-bottom-color: var(--accent);
+  }
+
+  .project-content :global(strong) {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* Backlinks styling */
+  .backlinks {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .backlinks h2 {
+    font-size: 1.3em;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 400;
+  }
+
+  .backlinks-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .backlinks-list li {
+    margin-bottom: 0.5rem;
+    font-size: 0.95em;
+  }
+
+  .backlinks-list a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .backlinks-list a:hover {
+    text-decoration: underline;
+  }
+
+  .backlink-type {
+    color: var(--text-tertiary);
+    font-size: 0.85em;
+    font-style: italic;
+  }
+
+  .project-footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .back-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.15s ease;
+  }
+
+  .back-link:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .project-header h1 {
+      font-size: 2em;
+    }
+  }
+</style>

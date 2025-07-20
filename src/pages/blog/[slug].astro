@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
+import { buildBacklinks, generateBacklinksHTML, getBacklinksCSS } from '../../utils/backlinks.ts';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
@@ -13,6 +14,11 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content } = await post.render();
 const { title, date, tags } = post.data;
+
+// Generate backlinks for this blog post
+const backlinksData = buildBacklinks();
+const currentPagePath = `/blog/${post.slug}`;
+const backlinksHTML = generateBacklinksHTML(currentPagePath, backlinksData);
 ---
 
 <Layout title={`${title} - Christopher de Beer`}>
@@ -42,6 +48,11 @@ const { title, date, tags } = post.data;
         <div class="post-content">
           <Content />
         </div>
+        
+        <!-- Backlinks section -->
+        {backlinksHTML && (
+          <div set:html={backlinksHTML} />
+        )}
         
         <footer class="post-footer">
           <a href="/blog/" class="back-link">← Back to Blog</a>
@@ -183,6 +194,46 @@ const { title, date, tags } = post.data;
 
   .back-link:hover {
     color: var(--accent);
+  }
+
+  /* Backlinks styling */
+  .backlinks {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .backlinks h2 {
+    font-size: 1.3em;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 400;
+  }
+
+  .backlinks-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .backlinks-list li {
+    margin-bottom: 0.5rem;
+    font-size: 0.95em;
+  }
+
+  .backlinks-list a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .backlinks-list a:hover {
+    text-decoration: underline;
+  }
+
+  .backlink-type {
+    color: var(--text-tertiary);
+    font-size: 0.85em;
+    font-style: italic;
   }
 
   @media (max-width: 768px) {
