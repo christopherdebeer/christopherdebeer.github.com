@@ -86,7 +86,7 @@ export function findMissingPages() {
  * Generate the content for a stub page
  */
 export function generateStubPageContent(stubPage) {
-  const { title, links, path: pagePath } = stubPage;
+  const { title, links } = stubPage;
   
   // Group links by source type
   const projectLinks = links.filter(link => link.sourceType === 'project');
