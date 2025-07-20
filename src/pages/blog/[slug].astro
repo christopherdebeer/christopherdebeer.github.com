@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
-import { buildBacklinks, generateBacklinksHTML, getBacklinksCSS } from '../../utils/backlinks.ts';
+import { buildBacklinks, generateBacklinksHTML } from '../../utils/backlinks.ts';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
