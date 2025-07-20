@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EditButton from '../../components/EditButton.astro';
+import Editor from '../../components/Editor.astro';
 import fs from 'fs';
 import path from 'path';
 import { buildBacklinks, generateBacklinksHTML } from '../../utils/backlinks.ts';
@@ -54,6 +56,9 @@ function markdownToHtml(markdown: string): string {
 }
 
 const htmlContent = markdownToHtml(content);
+
+// File path for editing
+const filePath = `projects/${slug}.md`;
 ---
 
 <Layout title={`${title} - Projects - Christopher de Beer`}>
@@ -63,7 +68,10 @@ const htmlContent = markdownToHtml(content);
         <nav class="breadcrumb">
           <a href="/">Home</a> → <a href="/projects/">Projects</a> → <span>{title}</span>
         </nav>
-        <h1>{title}</h1>
+        <h1>
+          {title}
+          <EditButton filePath={filePath} />
+        </h1>
       </header>
       
       <div class="project-content" set:html={htmlContent} />
@@ -78,6 +86,9 @@ const htmlContent = markdownToHtml(content);
       </footer>
     </article>
   </main>
+  
+  <!-- Editor modal -->
+  <Editor content="" filePath={filePath} />
 </Layout>
 
 <style>

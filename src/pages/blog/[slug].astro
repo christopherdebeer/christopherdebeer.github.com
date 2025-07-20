@@ -1,6 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
+import EditButton from '../../components/EditButton.astro';
+import Editor from '../../components/Editor.astro';
 import { buildBacklinks, generateBacklinksHTML } from '../../utils/backlinks.ts';
 
 export async function getStaticPaths() {
@@ -19,6 +21,9 @@ const { title, date, tags } = post.data;
 const backlinksData = buildBacklinks();
 const currentPagePath = `/blog/${post.slug}`;
 const backlinksHTML = generateBacklinksHTML(currentPagePath, backlinksData);
+
+// File path for editing
+const filePath = `src/content/blog/${post.slug}.md`;
 ---
 
 <Layout title={`${title} - Christopher de Beer`}>
@@ -26,7 +31,10 @@ const backlinksHTML = generateBacklinksHTML(currentPagePath, backlinksData);
     <div class="content-container">
       <article class="post">
         <header class="post-header">
-          <h1>{title}</h1>
+          <h1>
+            {title}
+            <EditButton filePath={filePath} />
+          </h1>
           <div class="post-meta">
             <time datetime={date.toISOString()}>
               {date.toLocaleDateString('en-US', { 
@@ -60,6 +68,9 @@ const backlinksHTML = generateBacklinksHTML(currentPagePath, backlinksData);
       </article>
     </div>
   </main>
+  
+  <!-- Editor modal -->
+  <Editor content="" filePath={filePath} />
 </Layout>
 
 <style>

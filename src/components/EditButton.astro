@@ -1,0 +1,88 @@
+---
+export interface Props {
+  filePath: string;
+  className?: string;
+}
+
+const { filePath, className = '' } = Astro.props;
+---
+
+<button 
+  class={`edit-btn ${className}`}
+  data-file-path={filePath}
+  id="edit-content-btn"
+  style="display: none;"
+>
+  Edit
+</button>
+
+<script>
+import { authService } from '../services/auth';
+
+function initEditButton() {
+  const editBtn = document.getElementById('edit-content-btn');
+  
+  if (!editBtn) return;
+
+  // Show button only if user has GitHub token
+  if (authService.hasToken()) {
+    editBtn.style.display = 'inline-block';
+  }
+
+  editBtn.addEventListener('click', async () => {
+    const filePath = editBtn.getAttribute('data-file-path');
+    if (!filePath) return;
+
+    // Validate token before opening editor
+    const isValid = await authService.validateToken();
+    if (!isValid) {
+      alert('GitHub token is invalid or expired. Please check your token in the footer settings.');
+      return;
+    }
+
+    // Open editor modal
+    if ((window as any).editorManager) {
+      await (window as any).editorManager.open(filePath);
+    }
+  });
+}
+
+// Initialize when DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initEditButton);
+} else {
+  initEditButton();
+}
+</script>
+
+<style>
+  .edit-btn {
+    background: var(--accent);
+    color: white;
+    border: 1px solid var(--accent);
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: 1rem;
+  }
+
+  .edit-btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  .edit-btn:active {
+    transform: translateY(1px);
+  }
+
+  @media (max-width: 768px) {
+    .edit-btn {
+      margin-left: 0;
+      margin-top: 0.5rem;
+      display: block;
+      width: fit-content;
+    }
+  }
+</style>
