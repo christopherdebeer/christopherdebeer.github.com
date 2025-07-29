@@ -51,9 +51,11 @@ The site implements automatic backlinks via `src/utils/backlinks.ts`:
 
 ---
 
-## Digital Garden Vision
+## Digital Garden Implementation
 
-This site embodies a **Digital Garden** philosophy - a free-form, living artifact that grows organically through interconnected content and ideas.
+This site **fully embodies** a **Digital Garden** philosophy - a free-form, living artifact that grows organically through interconnected content and ideas.
+
+**Status**: ✅ **Vision Realized** (July 2025) - Complete transformation from traditional website structure to organic digital garden achieved. See `digital-garden-transformation.md` for full implementation details.
 
 ### Content Philosophy
 
@@ -94,6 +96,73 @@ This site embodies a **Digital Garden** philosophy - a free-form, living artifac
 
 **Emergent Structure**: Let natural topic clusters and connection patterns emerge rather than imposing artificial organization.
 
+### Active Garden Principles
+
+**Currently Implemented & Working**:
+- ✅ **Emergent Themes** (`/tags/`): Topics surface by connection frequency, not artificial categories
+- ✅ **Explorations & Experiments** (`/projects/`): Narrative presentation of maker's journey over portfolio grid
+- ✅ **Ongoing Thoughts** (`/blog/`): Idea development over chronological publication
+- ✅ **Garden Entry Point** (`/`): Contextual exploration invitation vs. structured navigation
+- ✅ **Automatic Backlinks**: "Referenced by" sections on all content pages
+- ✅ **Contextual Linking**: Links embedded naturally within descriptive content
+
 ---
 
-*This is a living document. Like the garden it describes, it will grow and evolve with the site.*
+## Claude Interaction Guidelines
+
+### Digital Garden Node Creation
+
+**CRITICAL REQUIREMENT**: When Claude makes ANY changes to this site, Claude MUST create connected digital garden nodes to document the change process and outcomes.
+
+**Node Creation Protocol**:
+1. **Create Process Node**: Document what is being changed and why
+2. **Create Connection Threads**: Link the new node to related existing content
+3. **Update Backlinks**: Ensure bidirectional connections are established
+4. **Add Temporal Context**: Date and context for future garden evolution
+
+**Example Pattern**:
+```markdown
+# [Change Description] - Garden Evolution Node
+
+**Date**: [Current Date]  
+**Context**: [What prompted this change]  
+**Connected to**: [[related-page-1]], [[related-page-2]]
+
+## What Changed
+[Description of changes made]
+
+## Garden Impact  
+[How this affects the overall garden structure]
+
+## Future Growth
+[How this creates space for future development]
+```
+
+### Self-Documentation Requirements
+
+**Every Claude Interaction Must**:
+1. **Document the Process**: Create nodes showing the thinking and implementation
+2. **Explain Garden Impact**: How changes affect the overall garden ecosystem
+3. **Preserve Evolution History**: Link to previous transformation moments
+4. **Enable Future Growth**: Identify opportunities for organic expansion
+
+**Meta-Documentation Principle**: The garden should contain its own evolutionary story. Changes aren't just implemented - they're woven into the living documentation of how the garden grows.
+
+### Organic Growth Guidelines
+
+**When Making Changes**:
+- **Link-First Approach**: Create links to non-existent pages that might naturally develop
+- **Connection over Categorization**: Focus on relationships between ideas rather than filing them away
+- **Process Transparency**: Show the work, don't just present outcomes
+- **Emergent Structure**: Let organization arise from content connections rather than imposing structure
+
+**Content Creation Pattern**:
+1. Start with connections to existing content
+2. Document the exploration process
+3. Create stubs for future development
+4. Update backlinks and cross-references
+5. Add to the garden's evolutionary narrative
+
+---
+
+*This is a living document. Like the garden it describes, it will grow and evolve with the site. Every interaction with Claude should contribute to this ongoing evolutionary story.*
