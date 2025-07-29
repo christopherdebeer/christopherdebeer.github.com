@@ -1,0 +1,293 @@
+---
+export interface Props {
+  filePath: string;
+  initialContent?: string;
+}
+
+const { filePath, initialContent = '' } = Astro.props;
+---
+
+<div id="inline-editor" class="inline-editor" style="display: none;">
+  <div class="editor-header">
+    <div class="editor-status" id="inline-editor-status"></div>
+    <div class="editor-actions">
+      <button id="inline-save-btn" class="btn btn-primary">Save</button>
+      <button id="inline-cancel-btn" class="btn btn-secondary">Cancel</button>
+    </div>
+  </div>
+  <div id="inline-editor-content" class="editor-content"></div>
+</div>
+
+<script>
+import { EditorState } from 'prosemirror-state';
+import { EditorView } from 'prosemirror-view';
+import { keymap } from 'prosemirror-keymap';
+import { history, undo, redo } from 'prosemirror-history';
+import { baseKeymap } from 'prosemirror-commands';
+import { defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown';
+import { githubService } from '../services/github';
+
+class InlineEditorManager {
+  private view: EditorView | null = null;
+  private originalContent: string = '';
+  private filePath: string = '';
+  private sha: string = '';
+  private originalElement: HTMLElement | null = null;
+
+  async init(filePath: string) {
+    this.filePath = filePath;
+    
+    try {
+      const statusEl = document.getElementById('inline-editor-status');
+      if (statusEl) statusEl.textContent = 'Loading...';
+
+      // Load file content from GitHub
+      const fileData = await githubService.getFile(filePath);
+      this.originalContent = fileData.content;
+      this.sha = fileData.sha;
+
+      this.setupEditor();
+      this.setupEventListeners();
+      this.show();
+      
+      if (statusEl) statusEl.textContent = '';
+    } catch (error) {
+      console.error('Failed to load content:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const statusEl = document.getElementById('inline-editor-status');
+      if (statusEl) statusEl.textContent = `Error: ${message}`;
+    }
+  }
+
+  private setupEditor() {
+    const container = document.getElementById('inline-editor-content');
+    if (!container) return;
+
+    // Parse markdown to ProseMirror doc
+    const doc = defaultMarkdownParser.parse(this.originalContent);
+    
+    const state = EditorState.create({
+      doc,
+      plugins: [
+        history(),
+        keymap({
+          "Mod-z": undo,
+          "Mod-y": redo,
+          "Mod-Shift-z": redo,
+          "Mod-s": () => {
+            this.save();
+            return true;
+          },
+          "Escape": () => {
+            this.cancel();
+            return true;
+          }
+        }),
+        keymap(baseKeymap)
+      ]
+    });
+
+    this.view = new EditorView(container, {
+      state,
+      dispatchTransaction: (transaction) => {
+        const newState = this.view!.state.apply(transaction);
+        this.view!.updateState(newState);
+      }
+    });
+  }
+
+  private setupEventListeners() {
+    const saveBtn = document.getElementById('inline-save-btn');
+    const cancelBtn = document.getElementById('inline-cancel-btn');
+
+    saveBtn?.addEventListener('click', () => this.save());
+    cancelBtn?.addEventListener('click', () => this.cancel());
+  }
+
+  private show() {
+    // Hide original content
+    const postContent = document.querySelector('.post-content');
+    const projectContent = document.querySelector('.project-content');
+    const contentElement = postContent || projectContent;
+    
+    if (contentElement) {
+      this.originalElement = contentElement as HTMLElement;
+      this.originalElement.style.display = 'none';
+    }
+
+    // Show inline editor
+    const editor = document.getElementById('inline-editor');
+    if (editor) {
+      editor.style.display = 'block';
+    }
+
+    // Focus the editor
+    if (this.view) {
+      this.view.focus();
+    }
+  }
+
+  private hide() {
+    // Show original content
+    if (this.originalElement) {
+      this.originalElement.style.display = 'block';
+    }
+
+    // Hide inline editor
+    const editor = document.getElementById('inline-editor');
+    if (editor) {
+      editor.style.display = 'none';
+    }
+
+    // Clean up editor
+    if (this.view) {
+      this.view.destroy();
+      this.view = null;
+    }
+  }
+
+  private async save() {
+    if (!this.view) return;
+
+    const statusEl = document.getElementById('inline-editor-status');
+    if (statusEl) statusEl.textContent = 'Saving...';
+
+    try {
+      // Convert ProseMirror doc back to markdown
+      const markdown = defaultMarkdownSerializer.serialize(this.view.state.doc);
+      
+      // Update file via GitHub API
+      await githubService.updateFile(
+        this.filePath,
+        markdown,
+        this.sha,
+        `Update ${this.filePath} via inline editor`
+      );
+
+      if (statusEl) statusEl.textContent = 'Saved successfully!';
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Save failed:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (statusEl) statusEl.textContent = `Error: ${message}`;
+    }
+  }
+
+  private cancel() {
+    this.hide();
+    
+    // Remove edit parameter from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('edit');
+    window.history.replaceState({}, '', url.toString());
+  }
+}
+
+// Global inline editor manager
+(window as any).inlineEditorManager = new InlineEditorManager();
+</script>
+
+<style>
+  .inline-editor {
+    margin: 2rem 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+  }
+
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--background-subtle);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .editor-status {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    min-height: 1.2em;
+  }
+
+  .editor-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.15s ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  .btn-secondary {
+    background: var(--background);
+    color: var(--text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--background-subtle);
+  }
+
+  .editor-content {
+    padding: 1.5rem;
+    min-height: 400px;
+  }
+
+  .editor-content :global(.ProseMirror) {
+    outline: none;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    min-height: 300px;
+    font-family: Georgia, serif;
+    line-height: 1.6;
+    background: var(--background);
+  }
+
+  .editor-content :global(.ProseMirror:focus) {
+    border-color: var(--accent);
+  }
+
+  .editor-content :global(.ProseMirror p) {
+    margin: 1em 0;
+  }
+
+  .editor-content :global(.ProseMirror h1),
+  .editor-content :global(.ProseMirror h2),
+  .editor-content :global(.ProseMirror h3) {
+    font-weight: 400;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+  }
+
+  @media (max-width: 768px) {
+    .editor-header {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+    }
+    
+    .editor-content {
+      padding: 1rem;
+    }
+  }
+</style>

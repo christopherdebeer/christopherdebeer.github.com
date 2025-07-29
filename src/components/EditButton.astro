@@ -33,12 +33,21 @@ function initEditButton() {
     editBtn.style.display = 'inline-block';
     
     // Auto-open editor when edit mode is active
+    // Check if inline editor is available, otherwise use modal
     setTimeout(async () => {
       const filePath = editBtn.getAttribute('data-file-path');
-      if (filePath && (window as any).editorManager) {
+      const inlineEditorAvailable = (window as any).inlineEditorManager;
+      
+      if (filePath) {
         const isValid = await authService.validateToken();
         if (isValid) {
-          await (window as any).editorManager.open(filePath);
+          if (inlineEditorAvailable) {
+            // Inline editor will be initialized by the page script
+            return;
+          } else if ((window as any).editorManager) {
+            // Fallback to modal editor
+            await (window as any).editorManager.open(filePath);
+          }
         }
       }
     }, 100); // Small delay to ensure DOM is ready

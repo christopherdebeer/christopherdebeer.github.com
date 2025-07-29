@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import EditButton from '../../components/EditButton.astro';
 import Editor from '../../components/Editor.astro';
+import InlineEditor from '../../components/InlineEditor.astro';
 import { buildBacklinks, generateBacklinksHTML } from '../../utils/backlinks.ts';
 
 export async function getStaticPaths() {
@@ -57,6 +58,9 @@ const filePath = `src/content/blog/${post.slug}.md`;
           <Content />
         </div>
         
+        <!-- Inline Editor -->
+        <InlineEditor filePath={filePath} />
+        
         <!-- Backlinks section -->
         {backlinksHTML && (
           <div set:html={backlinksHTML} />
@@ -72,6 +76,28 @@ const filePath = `src/content/blog/${post.slug}.md`;
   <!-- Editor modal -->
   <Editor content="" filePath={filePath} />
 </Layout>
+
+<script define:vars={{ filePath }}>
+  // Initialize inline editor if edit mode is active
+  function initInlineEditorIfNeeded() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editMode = urlParams.get('edit') === 'true';
+    
+    if (editMode && (window as any).inlineEditorManager) {
+      // Small delay to ensure all components are loaded
+      setTimeout(() => {
+        (window as any).inlineEditorManager.init(filePath);
+      }, 200);
+    }
+  }
+
+  // Initialize when DOM is loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInlineEditorIfNeeded);
+  } else {
+    initInlineEditorIfNeeded();
+  }
+</script>
 
 <style>
   .post {
