@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "node scripts/generate-stubs.js && astro check && astro build",
+    "build": "node scripts/build.js",
     "generate-stubs": "node scripts/generate-stubs.js",
     "preview": "astro preview",
     "astro": "astro"
