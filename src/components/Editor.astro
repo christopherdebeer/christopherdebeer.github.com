@@ -135,6 +135,7 @@ class EditorManager {
       this.sha = fileData.sha;
 
       this.setupEditor();
+      this.setupEventListeners();
       
       const modal = document.getElementById('editor-modal');
       if (modal) modal.style.display = 'flex';
