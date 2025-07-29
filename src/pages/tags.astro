@@ -3,11 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import fs from 'fs';
 import path from 'path';
 
-// Extract tags from blog posts
+// Extract tags from blog posts to understand emergent themes
 const blogDir = path.join(process.cwd(), 'src/content/blog');
 const blogFiles = fs.readdirSync(blogDir).filter(file => file.endsWith('.md'));
 
-const blogTags = new Map();
+const emergentTopics = new Map();
 
 blogFiles.forEach(file => {
   const content = fs.readFileSync(path.join(blogDir, file), 'utf-8');
@@ -23,120 +23,71 @@ blogFiles.forEach(file => {
       const slug = file.replace('.md', '');
       
       tags.forEach(tag => {
-        if (!blogTags.has(tag)) {
-          blogTags.set(tag, []);
+        if (!emergentTopics.has(tag)) {
+          emergentTopics.set(tag, []);
         }
-        blogTags.get(tag).push({ title, slug, type: 'blog' });
+        emergentTopics.get(tag).push({ title, slug, type: 'blog' });
       });
     }
   }
 });
 
-// Create thematic project groupings
-const projectThemes = new Map();
-
-// JavaScript/Framework projects
-projectThemes.set('javascript', [
-  { title: 'Embryo.js', type: 'project', description: 'Embryonic Programming framework' },
-  { title: 'jspm-react-boilerplate', type: 'project', description: 'JSPM/React template' },
-  { title: 'Ejecta', type: 'project', description: 'JavaScript for iOS' }
-]);
-
-// UI/Interface projects  
-projectThemes.set('interface', [
-  { title: 'app-UI', type: 'project', description: 'UI components collection' },
-  { title: 'emilyandchris.wedding', type: 'project', description: 'Wedding website' }
-]);
-
-// Recent AI/Web experiments
-projectThemes.set('ai-tools', [
-  { title: 'mcp-chat', type: 'project', description: 'Chat application' },
-  { title: 'contextual', type: 'project', description: 'Context management' },
-  { title: 'websim', type: 'content', description: 'AI web creation exploration' }
-]);
-
-// Development tools
-projectThemes.set('dev-tools', [
-  { title: 'testler', type: 'project', description: 'Testing tool' },
-  { title: 'torrent-peek', type: 'project', description: 'Torrent utility' },
-  { title: 'lambda-sqlite-efs', type: 'project', description: 'AWS Lambda SQLite' }
-]);
-
-// Sort tags alphabetically
-const sortedBlogTags = new Map([...blogTags.entries()].sort());
-const sortedProjectThemes = new Map([...projectThemes.entries()].sort());
+// Sort by frequency (most connected topics first) - natural emergence
+const sortedTopics = new Map([...emergentTopics.entries()].sort((a, b) => b[1].length - a[1].length));
 ---
 
-<Layout title="Topics & Tags - Christopher de Beer">
+<Layout title="Emergent Themes - Christopher de Beer">
   <main class="content-container">
-    <header class="tags-header">
-      <h1>Topics & Tags</h1>
-      <p class="subtitle">Explore content by theme and topic</p>
-      <nav class="breadcrumb">
-        <a href="/">Home</a> → <span>Topics</span>
-      </nav>
+    <header class="themes-header">
+      <h1>Emergent Themes</h1>
+      <p class="subtitle">Ideas that have grown and connected naturally through writing and exploration</p>
     </header>
 
-    <section class="tags-section">
-      <h2>Blog Post Tags</h2>
-      <div class="tags-grid">
-        {Array.from(sortedBlogTags).map(([tag, posts]) => (
-          <div class="tag-group">
-            <h3 class="tag-name">#{tag}</h3>
-            <ul class="tag-posts">
+    <section class="narrative-intro">
+      <p>This page represents the organic clustering of ideas as they've emerged through my writing. Rather than imposing rigid categories, these themes have naturally surfaced through the process of exploration and documentation. The most connected ideas appear first—not by design, but through genuine interconnection.</p>
+      
+      <p>This is what a digital garden looks like when it's allowed to grow naturally: patterns emerge, connections form, and structure reveals itself through use rather than predetermined organization.</p>
+    </section>
+
+    <section class="emergent-clusters">
+      {Array.from(sortedTopics).map(([topic, posts]) => (
+        <div class="topic-cluster">
+          <h2 class="topic-name">
+            <span class="connection-count">({posts.length})</span>
+            {topic}
+          </h2>
+          <div class="topic-exploration">
+            <p class="cluster-intro">This theme has emerged through {posts.length} piece{posts.length !== 1 ? 's' : ''} of writing, suggesting a natural gravitational pull in my thinking:</p>
+            <ul class="connected-content">
               {posts.map((post: {title: string, slug: string, type: string}) => (
                 <li>
                   <a href={`/blog/${post.slug}/`}>{post.title}</a>
+                  <span class="content-type">({post.type})</span>
                 </li>
               ))}
             </ul>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </section>
 
-    <section class="themes-section">
-      <h2>Project Themes</h2>
-      <div class="themes-grid">
-        {Array.from(sortedProjectThemes).map(([theme, items]) => (
-          <div class="theme-group">
-            <h3 class="theme-name">{theme.replace('-', ' & ')}</h3>
-            <ul class="theme-items">
-              {items.map((item: {title: string, type: string, description: string}) => (
-                <li>
-                  {item.type === 'project' ? (
-                    <span>
-                      <strong>{item.title}</strong> - {item.description}
-                    </span>
-                  ) : (
-                    <a href={`/websim/`}>{item.title}</a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </section>
-
-    <footer class="tags-footer">
-      <p>
-        Browse all <a href="/blog/">articles</a> and <a href="/projects/">projects</a>, 
-        or return to the <a href="/">home</a> page.
+    <footer class="garden-navigation">
+      <p>These connections reveal themselves through the garden's <a href="/blog/">explorations</a> and <a href="/projects/">experiments</a>. Each link strengthens the web of understanding, creating new pathways for discovery.</p>
+      
+      <p class="meta-note">
+        <em>Note: This page demonstrates the shift from rigid categorization to emergent organization—a key principle of digital gardens. The structure you see here wasn't planned; it grew naturally from the content itself.</em>
       </p>
     </footer>
   </main>
 </Layout>
 
 <style>
-  .tags-header {
-    text-align: center;
+  .themes-header {
     margin-bottom: 3rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 2rem;
+    text-align: center;
   }
   
-  .tags-header h1 {
+  .themes-header h1 {
     font-size: 2.2em;
     margin-bottom: 0.5rem;
     font-weight: 400;
@@ -147,96 +98,154 @@ const sortedProjectThemes = new Map([...projectThemes.entries()].sort());
     font-size: 1.1em;
     color: var(--text-secondary);
     font-style: italic;
-    margin: 0 0 1rem 0;
+    margin: 0;
+    line-height: 1.5;
   }
   
-  .breadcrumb {
-    font-size: 0.9em;
-    color: var(--text-secondary);
+  .narrative-intro {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: var(--background-subtle);
+    border-left: 3px solid var(--accent);
   }
   
-  .breadcrumb a {
-    color: var(--accent);
-    text-decoration: none;
+  .narrative-intro p {
+    font-size: 1.05em;
+    line-height: 1.7;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
   }
   
-  .tags-section, .themes-section {
+  .narrative-intro p:last-child {
+    margin-bottom: 0;
+  }
+  
+  .emergent-clusters {
     margin-bottom: 3rem;
   }
   
-  .tags-section h2, .themes-section h2 {
-    font-size: 1.6em;
-    margin-bottom: 1.5rem;
+  .topic-cluster {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+  
+  .topic-cluster:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  
+  .topic-name {
+    font-size: 1.4em;
+    margin: 0 0 1rem 0;
     color: var(--text-primary);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.5rem;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
   
-  .tags-grid, .themes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  .tag-group, .theme-group {
-    border: 1px solid var(--border);
-    padding: 1.25rem;
-    background: var(--background-subtle);
-  }
-  
-  .tag-name, .theme-name {
-    font-size: 1.1em;
-    margin: 0 0 0.75rem 0;
+  .connection-count {
+    font-size: 0.7em;
     color: var(--accent);
     font-weight: 500;
-    text-transform: capitalize;
+    background: var(--background-subtle);
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
   }
   
-  .tag-posts, .theme-items {
+  .topic-exploration {
+    margin-left: 1rem;
+  }
+  
+  .cluster-intro {
+    font-size: 0.95em;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+  
+  .connected-content {
     margin: 0;
     padding: 0;
     list-style: none;
   }
   
-  .tag-posts li, .theme-items li {
-    margin-bottom: 0.4rem;
-    font-size: 0.95em;
-    line-height: 1.4;
+  .connected-content li {
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   
-  .tag-posts a, .theme-items a {
+  .connected-content a {
     color: var(--text-primary);
     text-decoration: none;
+    flex-grow: 1;
   }
   
-  .tag-posts a:hover, .theme-items a:hover {
+  .connected-content a:hover {
     color: var(--accent);
     text-decoration: underline;
   }
   
-  .tags-footer {
-    text-align: center;
+  .content-type {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+  
+  .garden-navigation {
     padding-top: 2rem;
     border-top: 1px solid var(--border);
     color: var(--text-secondary);
   }
   
-  .tags-footer a {
+  .garden-navigation p {
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+  
+  .garden-navigation a {
     color: var(--accent);
     text-decoration: none;
   }
   
-  .tags-footer a:hover {
+  .garden-navigation a:hover {
     text-decoration: underline;
   }
   
+  .meta-note {
+    font-size: 0.9em;
+    padding: 1.5rem;
+    background: var(--background-subtle);
+    border-radius: 4px;
+    margin-top: 1rem;
+  }
+  
+  .meta-note em {
+    color: var(--text-secondary);
+  }
+  
   @media (max-width: 768px) {
-    .tags-grid, .themes-grid {
-      grid-template-columns: 1fr;
+    .themes-header h1 {
+      font-size: 1.8em;
     }
     
-    .tags-header h1 {
-      font-size: 1.8em;
+    .narrative-intro {
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .topic-exploration {
+      margin-left: 0;
+    }
+    
+    .topic-name {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
     }
   }
 </style>
