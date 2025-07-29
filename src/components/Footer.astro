@@ -8,118 +8,183 @@
     </div>
     
     <div class="footer-section">
-      <details class="github-setup">
-        <summary>GitHub Edit Setup</summary>
-        <div class="setup-content">
-          <p>To enable inline editing, provide your GitHub personal access token:</p>
-          <div class="token-form">
-            <input 
-              type="password" 
-              id="github-token-input" 
-              placeholder="Enter GitHub token..."
-              class="token-input"
-            />
-            <div class="token-actions">
-              <button id="save-token-btn" class="btn btn-primary">Save</button>
-              <button id="test-token-btn" class="btn btn-secondary">Test</button>
-              <button id="clear-token-btn" class="btn btn-danger">Clear</button>
-            </div>
-          </div>
-          <div id="token-status" class="token-status"></div>
-          <div class="token-help">
-            <p><small>
-              Required permissions: <code>repo</code> scope for private repositories or <code>public_repo</code> for public repositories.
-              <br>
-              <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Create token</a>
-            </small></p>
-          </div>
-        </div>
-      </details>
+      <button id="edit-link" class="edit-link">Edit</button>
     </div>
   </div>
 </footer>
 
+<!-- Token Setup Modal -->
+<div id="token-modal" class="token-modal">
+  <div class="token-modal-container">
+    <div class="token-modal-header">
+      <h3>GitHub Edit Setup</h3>
+      <button id="close-token-modal" class="close-btn">&times;</button>
+    </div>
+    <div class="token-modal-content">
+      <p>To enable inline editing, provide your GitHub personal access token:</p>
+      <div class="token-form">
+        <input 
+          type="password" 
+          id="github-token-input" 
+          placeholder="Enter GitHub token..."
+          class="token-input"
+        />
+        <div class="token-actions">
+          <button id="save-token-btn" class="btn btn-primary">Save</button>
+          <button id="test-token-btn" class="btn btn-secondary">Test</button>
+          <button id="clear-token-btn" class="btn btn-danger">Clear</button>
+        </div>
+      </div>
+      <div id="token-status" class="token-status"></div>
+      <div class="token-help">
+        <p><small>
+          Required permissions: <code>repo</code> scope for private repositories or <code>public_repo</code> for public repositories.
+          <br>
+          <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Create token</a>
+        </small></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 import { authService } from '../services/auth';
 
-function initTokenSetup() {
+function initFooter() {
+  const editLink = document.getElementById('edit-link');
+  const tokenModal = document.getElementById('token-modal');
+  const closeModalBtn = document.getElementById('close-token-modal');
   const tokenInput = document.getElementById('github-token-input') as HTMLInputElement;
   const saveBtn = document.getElementById('save-token-btn');
   const testBtn = document.getElementById('test-token-btn');
   const clearBtn = document.getElementById('clear-token-btn');
   const statusEl = document.getElementById('token-status');
 
-  if (!tokenInput || !saveBtn || !testBtn || !clearBtn || !statusEl) return;
+  if (!editLink || !tokenModal || !closeModalBtn || !tokenInput || !saveBtn || !testBtn || !clearBtn || !statusEl) return;
 
-  // Load existing token (masked)
-  if (authService.hasToken()) {
-    tokenInput.placeholder = '••••••••••••••••';
-    statusEl.textContent = 'Token saved';
-    statusEl.className = 'token-status success';
-  }
-
-  saveBtn.addEventListener('click', async () => {
-    const token = tokenInput.value.trim();
-    if (!token) {
-      statusEl.textContent = 'Please enter a token';
-      statusEl.className = 'token-status error';
-      return;
-    }
-
-    authService.setToken(token);
-    
-    // Test the token
-    statusEl.textContent = 'Testing token...';
-    statusEl.className = 'token-status';
-    
-    const isValid = await authService.validateToken();
-    if (isValid) {
-      statusEl.textContent = 'Token saved and validated!';
-      statusEl.className = 'token-status success';
-      tokenInput.value = '';
-      tokenInput.placeholder = '••••••••••••••••';
-      
-      // Refresh page to show edit buttons
-      setTimeout(() => window.location.reload(), 1000);
+  // Handle Edit link click
+  editLink?.addEventListener('click', () => {
+    // Check if user has token
+    if (authService.hasToken()) {
+      // User has token, enable edit mode by adding ?edit=true to current URL
+      const url = new URL(window.location.href);
+      url.searchParams.set('edit', 'true');
+      window.location.href = url.toString();
     } else {
-      statusEl.textContent = 'Invalid token. Please check your token and permissions.';
-      statusEl.className = 'token-status error';
+      // No token, show token setup modal
+      if (tokenModal) tokenModal.style.display = 'flex';
+    }
+  });
+
+  // Handle modal close
+  closeModalBtn?.addEventListener('click', () => {
+    if (tokenModal) tokenModal.style.display = 'none';
+  });
+
+  // Close modal when clicking outside
+  tokenModal?.addEventListener('click', (e) => {
+    if (e.target === tokenModal && tokenModal) {
+      tokenModal.style.display = 'none';
+    }
+  });
+
+  // Initialize token form
+  initTokenForm();
+
+  function initTokenForm() {
+    // Load existing token (masked)
+    if (authService.hasToken()) {
+      tokenInput.placeholder = '••••••••••••••••';
+      if (statusEl) {
+        statusEl.textContent = 'Token saved';
+        statusEl.className = 'token-status success';
+      }
+    }
+
+    saveBtn?.addEventListener('click', async () => {
+      const token = tokenInput.value.trim();
+      if (!token) {
+        if (statusEl) {
+          statusEl.textContent = 'Please enter a token';
+          statusEl.className = 'token-status error';
+        }
+        return;
+      }
+
+      authService.setToken(token);
+      
+      // Test the token
+      if (statusEl) {
+        statusEl.textContent = 'Testing token...';
+        statusEl.className = 'token-status';
+      }
+      
+      const isValid = await authService.validateToken();
+      if (isValid) {
+        if (statusEl) {
+          statusEl.textContent = 'Token saved and validated!';
+          statusEl.className = 'token-status success';
+        }
+        tokenInput.value = '';
+        tokenInput.placeholder = '••••••••••••••••';
+        
+        // Close modal and enable edit mode
+        setTimeout(() => {
+          if (tokenModal) tokenModal.style.display = 'none';
+          const url = new URL(window.location.href);
+          url.searchParams.set('edit', 'true');
+          window.location.href = url.toString();
+        }, 1000);
+      } else {
+        if (statusEl) {
+          statusEl.textContent = 'Invalid token. Please check your token and permissions.';
+          statusEl.className = 'token-status error';
+        }
+        authService.clearToken();
+      }
+    });
+
+    testBtn?.addEventListener('click', async () => {
+      if (!authService.hasToken()) {
+        if (statusEl) {
+          statusEl.textContent = 'No token saved to test';
+          statusEl.className = 'token-status error';
+        }
+        return;
+      }
+
+      if (statusEl) {
+        statusEl.textContent = 'Testing token...';
+        statusEl.className = 'token-status';
+      }
+      
+      const isValid = await authService.validateToken();
+      if (statusEl) {
+        statusEl.textContent = isValid ? 'Token is valid!' : 'Token is invalid or expired';
+        statusEl.className = `token-status ${isValid ? 'success' : 'error'}`;
+      }
+    });
+
+    clearBtn?.addEventListener('click', () => {
       authService.clearToken();
-    }
-  });
-
-  testBtn.addEventListener('click', async () => {
-    if (!authService.hasToken()) {
-      statusEl.textContent = 'No token saved to test';
-      statusEl.className = 'token-status error';
-      return;
-    }
-
-    statusEl.textContent = 'Testing token...';
-    statusEl.className = 'token-status';
-    
-    const isValid = await authService.validateToken();
-    statusEl.textContent = isValid ? 'Token is valid!' : 'Token is invalid or expired';
-    statusEl.className = `token-status ${isValid ? 'success' : 'error'}`;
-  });
-
-  clearBtn.addEventListener('click', () => {
-    authService.clearToken();
-    tokenInput.value = '';
-    tokenInput.placeholder = 'Enter GitHub token...';
-    statusEl.textContent = 'Token cleared';
-    statusEl.className = 'token-status';
-    
-    // Refresh page to hide edit buttons
-    setTimeout(() => window.location.reload(), 1000);
-  });
+      tokenInput.value = '';
+      tokenInput.placeholder = 'Enter GitHub token...';
+      if (statusEl) {
+        statusEl.textContent = 'Token cleared';
+        statusEl.className = 'token-status';
+      }
+      
+      // Refresh page to hide edit buttons
+      setTimeout(() => window.location.reload(), 1000);
+    });
+  }
 }
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initTokenSetup);
+  document.addEventListener('DOMContentLoaded', initFooter);
 } else {
-  initTokenSetup();
+  initFooter();
 }
 </script>
 
@@ -149,27 +214,90 @@ if (document.readyState === 'loading') {
     flex: 0 0 auto;
   }
 
-  .github-setup {
-    text-align: right;
-  }
-
-  .github-setup summary {
-    cursor: pointer;
+  .edit-link {
+    background: var(--accent);
+    color: white;
+    border: 1px solid var(--accent);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
     font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .edit-link:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  /* Token Modal Styles */
+  .token-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .token-modal-container {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .token-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--background-subtle);
+  }
+
+  .token-modal-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: var(--text-primary);
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
     color: var(--text-secondary);
-    margin-bottom: 1rem;
+    padding: 0;
+    width: 1.5em;
+    height: 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
   }
 
-  .github-setup summary:hover {
-    color: var(--accent);
+  .close-btn:hover {
+    background: var(--border-light);
+    color: var(--text-primary);
   }
 
-  .setup-content {
-    margin-top: 1rem;
-    text-align: left;
+  .token-modal-content {
+    padding: 1.5rem;
+    overflow-y: auto;
   }
 
-  .setup-content p {
+  .token-modal-content p {
     font-size: 0.9em;
     color: var(--text-secondary);
     margin-bottom: 1rem;
@@ -187,6 +315,7 @@ if (document.readyState === 'loading') {
     font-size: 0.9em;
     margin-bottom: 0.5rem;
     font-family: monospace;
+    box-sizing: border-box;
   }
 
   .token-input:focus {
@@ -274,12 +403,9 @@ if (document.readyState === 'loading') {
       text-align: center;
     }
 
-    .github-setup {
-      text-align: center;
-    }
-
-    .setup-content {
-      text-align: left;
+    .token-modal-container {
+      width: 95%;
+      margin: 1rem;
     }
 
     .token-actions {
