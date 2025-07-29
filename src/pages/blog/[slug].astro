@@ -31,6 +31,9 @@ const filePath = `src/content/blog/${post.slug}.md`;
     <div class="content-container">
       <article class="post">
         <header class="post-header">
+          <nav class="breadcrumb">
+            <a href="/">Home</a> → <a href="/blog/">Blog</a> → <span>{title}</span>
+          </nav>
           <h1>
             {title}
             <EditButton filePath={filePath} />
@@ -80,9 +83,24 @@ const filePath = `src/content/blog/${post.slug}.md`;
 
   .post-header {
     margin-bottom: 3rem;
-    text-align: center;
     border-bottom: 1px solid var(--border);
     padding-bottom: 2rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
   }
 
   .post-header h1 {
@@ -91,6 +109,7 @@ const filePath = `src/content/blog/${post.slug}.md`;
     color: var(--text-primary);
     line-height: 1.2;
     font-weight: 400;
+    text-align: center;
   }
 
   .post-meta {

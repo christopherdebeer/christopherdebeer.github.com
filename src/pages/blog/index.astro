@@ -13,6 +13,9 @@ const sortedPosts = allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.
       <header>
         <h1>Blog</h1>
         <p>Thoughts, projects, and explorations</p>
+        <nav class="breadcrumb">
+          <a href="/">Home</a> → <span>Blog</span>
+        </nav>
       </header>
       
       <section class="posts">
@@ -63,8 +66,22 @@ const sortedPosts = allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.
   header p {
     font-size: 1.1em;
     color: var(--text-secondary);
-    margin: 0;
+    margin: 0 0 1rem 0;
     font-style: italic;
+  }
+
+  .breadcrumb {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+  }
+
+  .breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
   }
 
   .posts {
