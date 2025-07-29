@@ -9,10 +9,19 @@ import Layout from '../layouts/Layout.astro';
 			<p class="subtitle">Citizen of the web</p>
 		</header>
 		
-		<section class="description">
-			<p>Welcome to my digital space, where I share thoughts on web development, JavaScript frameworks, and document my various projects. This site follows the design principles of Edward Tufte, emphasizing clean typography and readability.</p>
+		<section class="garden-welcome">
+			<p>This is a digital garden—a space where ideas grow organically through exploration and connection. Unlike traditional websites with rigid hierarchies, here thoughts and <a href="/projects/">experiments</a> interweave naturally, revealing patterns and relationships through the process of making and writing.</p>
 			
-			<p>You can explore my <a href="/blog/">articles</a> on web development and programming, browse my collection of <a href="/projects/">projects</a> and experiments, or discover content by <a href="/tags/">topics and themes</a>.</p>
+			<p>You might begin by following <a href="/blog/">ongoing thoughts</a> as they develop, exploring the <a href="/tags/">emergent themes</a> that arise through sustained inquiry, or wandering through various <a href="/projects/">explorations and experiments</a> that capture different moments of curiosity and discovery.</p>
+			
+			<p>The structure you encounter isn't predetermined—it has grown through the accumulation of ideas and their natural connections. Each link strengthens the web of understanding, creating new pathways for exploration and serendipitous discovery.</p>
+		</section>
+		
+		<section class="garden-meta">
+			<h2>About This Garden</h2>
+			<p>This space embodies the principles of digital gardening: organic growth over rigid organization, connection over categorization, exploration over consumption. The design follows Edward Tufte's emphasis on clean typography and readability, letting ideas take center stage.</p>
+			
+			<p>Every page connects to others through contextual linking and automatic backlinks, creating a living web of knowledge that grows and evolves over time. This is thinking made visible—not as polished final products, but as ongoing development and discovery.</p>
 		</section>
 	</main>
 </Layout>
@@ -39,16 +48,56 @@ import Layout from '../layouts/Layout.astro';
 		margin: 0;
 	}
 	
-	.description {
+	.garden-welcome {
 		margin-bottom: 3rem;
+		padding: 2rem;
+		background: var(--background-subtle);
+		border-left: 3px solid var(--accent);
 	}
 	
-	.description p {
+	.garden-welcome p {
 		font-size: 1.1em;
 		line-height: 1.7;
 		color: var(--text-primary);
+		margin-bottom: 1.5rem;
 	}
 	
+	.garden-welcome p:last-child {
+		margin-bottom: 0;
+	}
+	
+	.garden-welcome a {
+		color: var(--accent);
+		text-decoration: none;
+		font-weight: 500;
+	}
+	
+	.garden-welcome a:hover {
+		text-decoration: underline;
+	}
+	
+	.garden-meta {
+		padding: 2rem 0;
+		border-top: 1px solid var(--border-light);
+	}
+	
+	.garden-meta h2 {
+		font-size: 1.4em;
+		margin: 0 0 1.5rem 0;
+		font-weight: 400;
+		color: var(--text-primary);
+	}
+	
+	.garden-meta p {
+		font-size: 1em;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		margin-bottom: 1.5rem;
+	}
+	
+	.garden-meta p:last-child {
+		margin-bottom: 0;
+	}
 	
 	@media (max-width: 768px) {
 		.intro h1 {
@@ -59,8 +108,20 @@ import Layout from '../layouts/Layout.astro';
 			font-size: 1.1em;
 		}
 		
-		.description p {
+		.garden-welcome {
+			padding: 1.5rem;
+		}
+		
+		.garden-welcome p {
 			font-size: 1em;
+		}
+		
+		.garden-meta {
+			padding: 1.5rem 0;
+		}
+		
+		.garden-meta h2 {
+			font-size: 1.2em;
 		}
 	}
 </style>
