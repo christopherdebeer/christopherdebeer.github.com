@@ -1,10 +1,7 @@
 ---
 export interface Props {
   filePath: string;
-  initialContent?: string;
 }
-
-const { filePath, initialContent = '' } = Astro.props;
 ---
 
 <div id="inline-editor" class="inline-editor" style="display: none;">

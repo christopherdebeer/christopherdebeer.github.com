@@ -77,16 +77,16 @@ const filePath = `src/content/blog/${post.slug}.md`;
   <Editor content="" filePath={filePath} />
 </Layout>
 
-<script define:vars={{ filePath }}>
+<script define:vars={{ filePath }} is:inline>
   // Initialize inline editor if edit mode is active
   function initInlineEditorIfNeeded() {
     const urlParams = new URLSearchParams(window.location.search);
     const editMode = urlParams.get('edit') === 'true';
     
-    if (editMode && (window as any).inlineEditorManager) {
+    if (editMode && window.inlineEditorManager) {
       // Small delay to ensure all components are loaded
       setTimeout(() => {
-        (window as any).inlineEditorManager.init(filePath);
+        window.inlineEditorManager.init(filePath);
       }, 200);
     }
   }
