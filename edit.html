@@ -156,8 +156,12 @@ async function loadFile(path) {
   }
 }
 
-// Connect handler
-$('connect').onclick = async () => {
+// Get file param from URL
+const urlParams = new URLSearchParams(window.location.search);
+const fileParam = urlParams.get('file');
+
+// Connect and optionally load file
+async function connect(autoLoadFile = null) {
   token = $('token').value.trim();
   if (!token) return;
 
@@ -169,10 +173,19 @@ $('connect').onclick = async () => {
     $('editor-wrap').classList.remove('hidden');
     $('auth-status').textContent = `Connected. ${files.length} files found.`;
     initEditor();
+
+    // Auto-load file if specified
+    if (autoLoadFile && files.some(f => f.path === autoLoadFile)) {
+      $('files').value = autoLoadFile;
+      await loadFile(autoLoadFile);
+    }
   } catch (e) {
     $('auth-status').textContent = 'Error: ' + e.message;
   }
-};
+}
+
+// Connect handler
+$('connect').onclick = () => connect(fileParam);
 
 // File select handler
 $('files').onchange = () => loadFile($('files').value);
@@ -222,6 +235,8 @@ created: ${new Date().toISOString().split('T')[0]}
 // Persist token in sessionStorage
 if (sessionStorage.getItem('gh-token')) {
   $('token').value = sessionStorage.getItem('gh-token');
+  // Auto-connect if token stored and file param provided
+  if (fileParam) connect(fileParam);
 }
 $('token').onchange = () => sessionStorage.setItem('gh-token', $('token').value);
 </script>

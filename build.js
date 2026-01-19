@@ -56,12 +56,13 @@ function convertLinks(content, allSlugs) {
 }
 
 // Minimal HTML template
-function template(title, content, backlinks, meta) {
+function template(title, content, backlinks, meta, slug) {
   const status = meta.status || 'seedling'
   const statusIcon = { seedling: '&#127793;', budding: '&#127807;', evergreen: '&#127795;' }[status] || ''
   const blHtml = backlinks.length
     ? `<section class="backlinks"><h2>Linked from</h2><ul>${backlinks.map(b => `<li><a href="/${b}.html">${b}</a></li>`).join('')}</ul></section>`
     : ''
+  const srcPath = `src/${slug}.md`
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -77,18 +78,21 @@ a { color: var(--link); }
 a.broken { color: var(--broken); border-bottom: 1px dashed; }
 h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
 .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+.meta a { color: var(--muted); margin-left: 1rem; }
 .backlinks { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--muted); font-size: 0.9rem; }
 .backlinks h2 { font-size: 1rem; color: var(--muted); }
 .backlinks ul { padding-left: 1.2rem; }
+#edit-link { display: none; }
 </style>
 </head>
 <body>
 <article>
 <h1>${statusIcon} ${title}</h1>
-<div class="meta">${meta.created || ''}</div>
+<div class="meta">${meta.created || ''}<a href="/edit.html?file=${srcPath}" id="edit-link">edit</a></div>
 ${content}
 </article>
 ${blHtml}
+<script>if(sessionStorage.getItem('gh-token'))document.getElementById('edit-link').style.display='inline'</script>
 </body>
 </html>`
 }
@@ -128,7 +132,7 @@ function build() {
     const html = marked.parse(converted)
     const title = page.meta.title || slug.split('/').pop()
     const bl = backlinks.get(slug) || []
-    const out = template(title, html, bl, page.meta)
+    const out = template(title, html, bl, page.meta, slug)
     const outPath = toOut(slug)
     mkdirSync(dirname(outPath), { recursive: true })
     writeFileSync(outPath, out)

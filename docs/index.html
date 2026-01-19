@@ -13,15 +13,17 @@ a { color: var(--link); }
 a.broken { color: var(--broken); border-bottom: 1px dashed; }
 h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
 .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+.meta a { color: var(--muted); margin-left: 1rem; }
 .backlinks { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--muted); font-size: 0.9rem; }
 .backlinks h2 { font-size: 1rem; color: var(--muted); }
 .backlinks ul { padding-left: 1.2rem; }
+#edit-link { display: none; }
 </style>
 </head>
 <body>
 <article>
 <h1>&#127795; Welcome to the garden</h1>
-<div class="meta">2026-01-18</div>
+<div class="meta">2026-01-18<a href="/edit.html?file=src/index.md" id="edit-link">edit</a></div>
 <p>This is a <a href="/digital-gardens.html">digital garden</a>—a collection of <a href="/evergreen-notes.html">evergreen-notes</a> that grow through <a href="/bi-directional-links.html">connection</a>.</p>
 <p>Not a blog. Not a portfolio. A place for <a href="/thinking-in-public.html">thinking-in-public</a>.</p>
 <p>Start anywhere. Follow links. Get lost. That&#39;s the point.</p>
@@ -36,5 +38,6 @@ h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
 
 </article>
 
+<script>if(sessionStorage.getItem('gh-token'))document.getElementById('edit-link').style.display='inline'</script>
 </body>
 </html>
