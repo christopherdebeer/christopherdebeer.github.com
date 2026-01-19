@@ -95,7 +95,7 @@ This connects to [[future-note-i-havent-written]] which I'll flesh out later.
 
 After changes to `src/`, run `npm run build` to regenerate `docs/`.
 
-GitHub Actions auto-deploys on push to main.
+Vercel auto-deploys on push to main.
 
 ## Editor
 
