@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npm run build && cp edit.html docs/",
+  "outputDirectory": "docs"
+}
