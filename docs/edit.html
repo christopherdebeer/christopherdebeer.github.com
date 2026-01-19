@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Garden</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+:root { --bg: #fffcf7; --fg: #2d2d2d; --link: #3366cc; --muted: #888; --border: #ddd; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1a1a1a; --fg: #e0e0e0; --link: #6699ff; --muted: #666; --border: #333; }
+  .CodeMirror { background: #1a1a1a; color: #e0e0e0; }
+}
+* { box-sizing: border-box; }
+body { font: 16px/1.5 Georgia, serif; margin: 0; padding: 1rem; background: var(--bg); color: var(--fg); }
+.container { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 1.3rem; margin: 0 0 1rem; }
+input, button, select { font: inherit; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--fg); }
+button { cursor: pointer; background: var(--link); color: white; border-color: var(--link); }
+button:hover { opacity: 0.9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.row input[type="password"] { flex: 1; min-width: 200px; }
+#files { min-width: 200px; }
+.CodeMirror { height: calc(100vh - 200px); border: 1px solid var(--border); font-size: 15px; }
+.status { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
+.hidden { display: none; }
+#auth { margin-bottom: 1rem; }
+#editor-wrap { margin-top: 1rem; }
+.file-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Edit Garden</h1>
+
+  <div id="auth">
+    <div class="row">
+      <input type="password" id="token" placeholder="GitHub Personal Access Token">
+      <button id="connect">Connect</button>
+    </div>
+    <div class="status" id="auth-status">Enter a PAT with repo scope to edit files.</div>
+  </div>
+
+  <div id="editor-wrap" class="hidden">
+    <div class="row">
+      <select id="files"><option value="">Select a file...</option></select>
+      <button id="save" disabled>Save</button>
+      <button id="new-file">New</button>
+    </div>
+    <div class="file-meta" id="file-meta"></div>
+    <textarea id="code"></textarea>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script>
+const OWNER = 'christopherdebeer';
+const REPO = 'christopherdebeer.github.com';
+const BRANCH = 'main';
+const SRC_PATH = 'src';
+
+let token = '';
+let editor = null;
+let currentFile = null;
+let currentSha = null;
+
+const $ = id => document.getElementById(id);
+
+// GitHub API helper
+async function gh(endpoint, opts = {}) {
+  const res = await fetch(`https://api.github.com${endpoint}`, {
+    ...opts,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      ...opts.headers
+    }
+  });
+  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+  return res.json();
+}
+
+// List markdown files in src/
+async function listFiles() {
+  const data = await gh(`/repos/${OWNER}/${REPO}/contents/${SRC_PATH}?ref=${BRANCH}`);
+  return data.filter(f => f.name.endsWith('.md')).map(f => ({ name: f.name, path: f.path }));
+}
+
+// Get file content
+async function getFile(path) {
+  const data = await gh(`/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`);
+  return { content: atob(data.content), sha: data.sha };
+}
+
+// Save file
+async function saveFile(path, content, sha, message) {
+  return gh(`/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: btoa(unescape(encodeURIComponent(content))),
+      sha,
+      branch: BRANCH
+    })
+  });
+}
+
+// Create new file
+async function createFile(path, content, message) {
+  return gh(`/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: btoa(unescape(encodeURIComponent(content))),
+      branch: BRANCH
+    })
+  });
+}
+
+// Initialize CodeMirror
+function initEditor() {
+  if (editor) return;
+  editor = CodeMirror.fromTextArea($('code'), {
+    mode: 'markdown',
+    lineNumbers: true,
+    lineWrapping: true,
+    theme: 'default'
+  });
+  editor.on('change', () => {
+    $('save').disabled = !currentFile;
+  });
+}
+
+// Load file into editor
+async function loadFile(path) {
+  if (!path) {
+    editor.setValue('');
+    currentFile = null;
+    currentSha = null;
+    $('file-meta').textContent = '';
+    $('save').disabled = true;
+    return;
+  }
+  $('file-meta').textContent = 'Loading...';
+  try {
+    const { content, sha } = await getFile(path);
+    editor.setValue(content);
+    currentFile = path;
+    currentSha = sha;
+    $('file-meta').textContent = path;
+    $('save').disabled = false;
+  } catch (e) {
+    $('file-meta').textContent = 'Error: ' + e.message;
+  }
+}
+
+// Connect handler
+$('connect').onclick = async () => {
+  token = $('token').value.trim();
+  if (!token) return;
+
+  $('auth-status').textContent = 'Connecting...';
+  try {
+    const files = await listFiles();
+    $('files').innerHTML = '<option value="">Select a file...</option>' +
+      files.map(f => `<option value="${f.path}">${f.name}</option>`).join('');
+    $('editor-wrap').classList.remove('hidden');
+    $('auth-status').textContent = `Connected. ${files.length} files found.`;
+    initEditor();
+  } catch (e) {
+    $('auth-status').textContent = 'Error: ' + e.message;
+  }
+};
+
+// File select handler
+$('files').onchange = () => loadFile($('files').value);
+
+// Save handler
+$('save').onclick = async () => {
+  if (!currentFile || !currentSha) return;
+  $('save').disabled = true;
+  $('file-meta').textContent = 'Saving...';
+  try {
+    const result = await saveFile(currentFile, editor.getValue(), currentSha, `Update ${currentFile.split('/').pop()}`);
+    currentSha = result.content.sha;
+    $('file-meta').textContent = currentFile + ' (saved)';
+  } catch (e) {
+    $('file-meta').textContent = 'Error: ' + e.message;
+  }
+  $('save').disabled = false;
+};
+
+// New file handler
+$('new-file').onclick = async () => {
+  const name = prompt('Filename (without .md):');
+  if (!name) return;
+  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+  const path = `${SRC_PATH}/${slug}.md`;
+  const template = `---
+title: ${name}
+status: seedling
+created: ${new Date().toISOString().split('T')[0]}
+---
+
+`;
+  $('file-meta').textContent = 'Creating...';
+  try {
+    const result = await createFile(path, template, `Add ${slug}.md`);
+    // Refresh file list
+    const files = await listFiles();
+    $('files').innerHTML = '<option value="">Select a file...</option>' +
+      files.map(f => `<option value="${f.path}">${f.name}</option>`).join('');
+    $('files').value = path;
+    await loadFile(path);
+  } catch (e) {
+    $('file-meta').textContent = 'Error: ' + e.message;
+  }
+};
+
+// Persist token in sessionStorage
+if (sessionStorage.getItem('gh-token')) {
+  $('token').value = sessionStorage.getItem('gh-token');
+}
+$('token').onchange = () => sessionStorage.setItem('gh-token', $('token').value);
+</script>
+</body>
+</html>
