@@ -29,8 +29,10 @@ jobs:
 
       - run: npm run build
 
-      - name: Copy CNAME to output
-        run: cp CNAME docs/
+      - name: Copy static files to output
+        run: |
+          cp CNAME docs/
+          cp edit.html docs/
 
       - name: Add .nojekyll
         run: touch docs/.nojekyll
