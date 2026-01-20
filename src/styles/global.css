@@ -149,15 +149,89 @@ button:disabled {
   margin-bottom: 0.5rem;
 }
 
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
 /* CodeMirror overrides */
 .cm-editor {
-  height: calc(100vh - 200px);
+  height: calc(100vh - 220px);
   border: 1px solid var(--border);
   font-size: 15px;
+}
+
+.cm-editor .cm-content {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   .cm-editor {
     background: var(--bg);
+  }
+}
+
+/* Mobile responsive editor styles */
+@media (max-width: 640px) {
+  .editor-container {
+    padding: 0.75rem;
+  }
+
+  .editor-container h1 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .row input[type='password'] {
+    width: 100%;
+    min-width: unset;
+  }
+
+  #files {
+    width: 100%;
+    min-width: unset;
+  }
+
+  input,
+  button,
+  select {
+    padding: 0.6rem 0.75rem;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  .row button {
+    width: 100%;
+  }
+
+  /* File controls row - keep save/new buttons side by side */
+  .row:has(#files) {
+    flex-direction: column;
+  }
+
+  .row:has(#files) button {
+    width: auto;
+    flex: 1;
+  }
+
+  .cm-editor {
+    height: calc(100vh - 280px);
+    font-size: 14px;
+  }
+}
+
+/* Tablet and up - optimize layout */
+@media (min-width: 641px) {
+  .row input[type='password'] {
+    max-width: 400px;
+  }
+
+  #files {
+    flex: 1;
+    max-width: 400px;
   }
 }
