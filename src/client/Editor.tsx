@@ -33,7 +33,7 @@ export function Editor() {
 
     const state = EditorState.create({
       doc: '',
-      extensions: [basicSetup, markdown()],
+      extensions: [basicSetup, markdown(), EditorView.lineWrapping],
     })
 
     viewRef.current = new EditorView({
@@ -189,10 +189,12 @@ created: ${new Date().toISOString().split('T')[0]}
                 </option>
               ))}
             </select>
-            <button onClick={handleSave} disabled={!currentFile || saving}>
-              Save
-            </button>
-            <button onClick={handleNewFile}>New</button>
+            <div className="button-group">
+              <button onClick={handleSave} disabled={!currentFile || saving}>
+                Save
+              </button>
+              <button onClick={handleNewFile}>New</button>
+            </div>
           </div>
           <div className="file-meta">{fileMeta}</div>
           <div ref={editorRef} />
