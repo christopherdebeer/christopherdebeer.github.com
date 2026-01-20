@@ -79,6 +79,10 @@ a.broken {
 }
 
 /* Stub pages (missing notes) */
+.stub-page .meta {
+  margin-bottom: 1.5rem;
+}
+
 .stub-page .stub-notice {
   color: var(--muted);
   font-style: italic;
@@ -90,20 +94,17 @@ a.broken {
   color: var(--muted);
 }
 
-.stub-page .disambiguate-list {
-  list-style: none;
-  padding: 0;
+.stub-page .disambiguate-banner {
+  background: var(--border);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
   margin: 1rem 0;
+  font-size: 0.95rem;
 }
 
-.stub-page .disambiguate-list li {
-  margin: 0.5rem 0;
-}
-
-.stub-page .disambiguate-list .slug-hint {
+.stub-page .disambiguate-banner .slug-hint {
   color: var(--muted);
   font-size: 0.85rem;
-  margin-left: 0.5rem;
 }
 
 #edit-link {
