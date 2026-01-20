@@ -1,5 +1,6 @@
 import React from 'react'
 import { Backlinks } from './Backlinks.js'
+import { BacklinkItem } from './types.js'
 
 interface DisambiguatePage {
   slug: string
@@ -8,7 +9,7 @@ interface DisambiguatePage {
 
 interface StubPageProps {
   slug: string
-  backlinks: string[]
+  backlinks: BacklinkItem[]
   // For disambiguation: multiple pages with same base slug
   disambiguate?: DisambiguatePage[]
 }

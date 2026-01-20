@@ -1,7 +1,8 @@
 import React from 'react'
+import { BacklinkItem } from './types.js'
 
 interface BacklinksProps {
-  links: string[]
+  links: BacklinkItem[]
 }
 
 export function Backlinks({ links }: BacklinksProps) {
@@ -11,9 +12,10 @@ export function Backlinks({ links }: BacklinksProps) {
     <section className="backlinks">
       <h2>Linked from</h2>
       <ul>
-        {links.map((slug) => (
+        {links.map(({ slug, title }) => (
           <li key={slug}>
-            <a href={`/${slug}.html`}>{slug}</a>
+            <a href={`/${slug}.html`}>{title}</a>
+            {title !== slug && <span className="slug-hint"> ({slug})</span>}
           </li>
         ))}
       </ul>
