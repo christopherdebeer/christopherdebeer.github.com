@@ -12,10 +12,11 @@ export function Backlinks({ links }: BacklinksProps) {
     <section className="backlinks">
       <h2>Linked from</h2>
       <ul>
-        {links.map(({ slug, title }) => (
+        {links.map(({ slug, title, linkText }) => (
           <li key={slug}>
             <a href={`/${slug}.html`}>{title}</a>
             {title !== slug && <span className="slug-hint"> ({slug})</span>}
+            {linkText && <span className="link-text"> "{linkText}"</span>}
           </li>
         ))}
       </ul>
