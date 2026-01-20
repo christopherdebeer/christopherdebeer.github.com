@@ -1,6 +1,6 @@
 const OWNER = 'christopherdebeer'
 const REPO = 'garden'
-const BRANCH = 'main'
+const BRANCH = 'master'
 const SRC_PATH = 'src'
 
 export interface GitHubFile {
