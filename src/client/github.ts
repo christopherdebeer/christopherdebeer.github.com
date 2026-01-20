@@ -95,9 +95,9 @@ export async function createFile(
 }
 
 export function getStoredToken(): string {
-  return sessionStorage.getItem('gh-token') || ''
+  return localStorage.getItem('gh-token') || ''
 }
 
 export function storeToken(token: string): void {
-  sessionStorage.setItem('gh-token', token)
+  localStorage.setItem('gh-token', token)
 }
