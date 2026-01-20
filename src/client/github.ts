@@ -43,7 +43,11 @@ export async function getFile(token: string, path: string): Promise<FileContent>
     `/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`,
     token
   )
-  return { content: atob(data.content), sha: data.sha }
+  // Properly decode base64 → UTF-8 (atob only handles Latin-1)
+  const binary = atob(data.content)
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
+  const content = new TextDecoder().decode(bytes)
+  return { content, sha: data.sha }
 }
 
 // Read file content using raw.githubusercontent.com (no auth required for public repos)
