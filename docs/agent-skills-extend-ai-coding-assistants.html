@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent skills extend AI coding assistants with reusable knowledge</title>
+<style>
+:root { --bg: #fffcf7; --fg: #2d2d2d; --link: #3366cc; --broken: #cc3366; --muted: #888; }
+@media (prefers-color-scheme: dark) { :root { --bg: #1a1a1a; --fg: #e0e0e0; --link: #6699ff; --broken: #ff6699; --muted: #666; } }
+* { box-sizing: border-box; }
+body { font: 18px/1.6 Georgia, serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg); }
+a { color: var(--link); }
+a.broken { color: var(--broken); border-bottom: 1px dashed; }
+h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+.meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+.meta a { color: var(--muted); margin-left: 1rem; }
+.backlinks { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--muted); font-size: 0.9rem; }
+.backlinks h2 { font-size: 1rem; color: var(--muted); }
+.backlinks ul { padding-left: 1.2rem; }
+#edit-link { display: none; }
+</style>
+</head>
+<body>
+<article>
+<h1>&#127793; Agent skills extend AI coding assistants with reusable knowledge</h1>
+<div class="meta">2026-01-20<a href="/edit.html?file=src/agent-skills-extend-ai-coding-assistants.md" id="edit-link">edit</a></div>
+<p>Agent skills are folders of instructions that AI coding assistants can discover and use. They package <a href="/knowledge-work-should-accrete.html">procedural knowledge</a> into portable, version-controlled units.</p>
+<p>The format uses <code>SKILL.md</code> files with YAML frontmatter and markdown instructions. Skills work across Claude Code, Cursor, Codex, and other compatible agents.</p>
+<h2>Installing Skills</h2>
+<p>Use the <code>skills</code> CLI to add skills from GitHub repos:</p>
+<pre><code class="language-bash"># Install from a GitHub repository
+npx skills add owner/repo
+
+# List available skills without installing
+npx skills add owner/repo --list
+
+# Install specific skill to specific agent
+npx skills add owner/repo --skill skill-name --agent claude-code
+</code></pre>
+<h2>Installing the Digital Garden Skill</h2>
+<p>This garden&#39;s framework is available as an installable skill:</p>
+<pre><code class="language-bash">npx skills add christopherdebeer/garden --skill digital-garden
+</code></pre>
+<p>This teaches Claude Code the <a href="/digital-gardens.html">digital garden</a> conventions:</p>
+<ul>
+<li><a href="/atomicity-forces-clarity.html">Atomic notes</a> with assertion titles</li>
+<li><a href="/bi-directional-links.html">Wiki-links</a> using <code>&lt;a href=&quot;/slug.html&quot; class=&quot;broken&quot;&gt;slug&lt;/a&gt;</code> syntax</li>
+<li>Status levels (seedling → budding → evergreen)</li>
+<li>File conventions and build workflow</li>
+</ul>
+<h2>Creating Skills</h2>
+<p>A minimal skill requires one file:</p>
+<pre><code>skill-name/
+└── SKILL.md
+</code></pre>
+<p>The <code>SKILL.md</code> format:</p>
+<pre><code class="language-yaml">---
+name: skill-name
+description: What this skill does and when to use it.
+license: MIT
+metadata:
+  author: your-name
+  version: &quot;1.0.0&quot;
+---
+
+# Skill Title
+
+Instructions the agent follows when this skill activates.
+</code></pre>
+<p>See the specification at <a href="https://agentskills.io/specification">agentskills.io</a>.</p>
+
+</article>
+
+<script>if(sessionStorage.getItem('gh-token'))document.getElementById('edit-link').style.display='inline'</script>
+</body>
+</html>
