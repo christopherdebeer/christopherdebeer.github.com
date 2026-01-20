@@ -5,7 +5,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
 import { StubPage } from './src/components/StubPage.js'
-import type { BacklinkItem, PageMeta, PageData } from './src/components/types.js'
+import type { BacklinkItem, PageMeta, PageData, LinkInfo } from './src/components/types.js'
 
 const SRC = './docs'
 const OUT = './dist'
@@ -44,11 +44,13 @@ const toSlug = (p: string): string => relative(SRC, p).replace(/\.md$/, '')
 const toOut = (slug: string): string => join(OUT, slug + '.html')
 
 // Extract [[wiki-links]] from content
-function extractLinks(content: string): string[] {
-  const links: string[] = []
+function extractLinks(content: string): LinkInfo[] {
+  const links: LinkInfo[] = []
   content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
-    const [slug] = link.split('|')
-    links.push(slug.trim())
+    const parts = link.split('|')
+    const slug = parts[0].trim()
+    const linkText = parts[1]?.trim() || null
+    links.push({ slug, linkText })
     return ''
   })
   return links
@@ -102,13 +104,21 @@ function build(): void {
     pages.set(slug, { slug, meta, body, links, file })
   }
 
-  // Build backlinks index (deduplicated)
-  const backlinks = new Map<string, string[]>()
+  // Backlink entry: source page slug + the link text used (if any)
+  interface BacklinkEntry {
+    sourceSlug: string
+    linkText: string | null
+  }
+
+  // Build backlinks index (deduplicated by source slug, keeps first linkText)
+  const backlinks = new Map<string, BacklinkEntry[]>()
   for (const [slug, page] of pages) {
-    for (const link of new Set(page.links)) {
-      if (!backlinks.has(link)) backlinks.set(link, [])
-      const bl = backlinks.get(link)!
-      if (!bl.includes(slug)) bl.push(slug)
+    const seen = new Set<string>() // dedupe multiple links to same target
+    for (const link of page.links) {
+      if (seen.has(link.slug)) continue
+      seen.add(link.slug)
+      if (!backlinks.has(link.slug)) backlinks.set(link.slug, [])
+      backlinks.get(link.slug)!.push({ sourceSlug: slug, linkText: link.linkText })
     }
   }
 
@@ -116,8 +126,8 @@ function build(): void {
   const missingSlugs = new Set<string>()
   for (const page of pages.values()) {
     for (const link of page.links) {
-      if (!allSlugs.has(link)) {
-        missingSlugs.add(link)
+      if (!allSlugs.has(link.slug)) {
+        missingSlugs.add(link.slug)
       }
     }
   }
@@ -125,11 +135,12 @@ function build(): void {
   // Detect slug collisions for disambiguation
   const collisions = buildSlugCollisions(allSlugs)
 
-  // Helper to convert backlink slugs to BacklinkItem with titles
-  const toBacklinkItems = (slugs: string[]): BacklinkItem[] =>
-    slugs.map((s) => ({
-      slug: s,
-      title: pages.get(s)?.meta.title || s.split('/').pop() || s,
+  // Helper to convert backlink entries to BacklinkItem with titles and link text
+  const toBacklinkItems = (entries: BacklinkEntry[]): BacklinkItem[] =>
+    entries.map((e) => ({
+      slug: e.sourceSlug,
+      title: pages.get(e.sourceSlug)?.meta.title || e.sourceSlug.split('/').pop() || e.sourceSlug,
+      linkText: e.linkText || undefined,
     }))
 
   // Render each page
