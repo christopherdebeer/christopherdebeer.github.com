@@ -1,0 +1,163 @@
+:root {
+  --bg: #fffcf7;
+  --fg: #2d2d2d;
+  --link: #3366cc;
+  --broken: #cc3366;
+  --muted: #888;
+  --border: #ddd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --fg: #e0e0e0;
+    --link: #6699ff;
+    --broken: #ff6699;
+    --muted: #666;
+    --border: #333;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font: 18px/1.6 Georgia, serif;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--link);
+}
+
+a.broken {
+  color: var(--broken);
+  border-bottom: 1px dashed;
+}
+
+/* Article pages */
+.page {
+  max-width: 640px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.page h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+
+.meta a {
+  color: var(--muted);
+  margin-left: 1rem;
+}
+
+.backlinks {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--muted);
+  font-size: 0.9rem;
+}
+
+.backlinks h2 {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.backlinks ul {
+  padding-left: 1.2rem;
+}
+
+#edit-link {
+  display: none;
+}
+
+/* Editor styles */
+.editor-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.editor-container h1 {
+  font-size: 1.3rem;
+  margin: 0 0 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+input,
+button,
+select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button {
+  cursor: pointer;
+  background: var(--link);
+  color: white;
+  border-color: var(--link);
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row input[type='password'] {
+  flex: 1;
+  min-width: 200px;
+}
+
+#files {
+  min-width: 200px;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.file-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+/* CodeMirror overrides */
+.cm-editor {
+  height: calc(100vh - 200px);
+  border: 1px solid var(--border);
+  font-size: 15px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cm-editor {
+    background: var(--bg);
+  }
+}
