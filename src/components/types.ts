@@ -8,6 +8,7 @@ export interface BacklinkItem {
   slug: string
   title: string
   linkText?: string // display text used in the link, if different from slug
+  anchorId?: string // anchor ID at the link location in source page
 }
 
 export interface LinkInfo {

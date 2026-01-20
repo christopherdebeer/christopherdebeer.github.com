@@ -56,16 +56,36 @@ function extractLinks(content: string): LinkInfo[] {
   return links
 }
 
-// Convert [[wiki-links]] to HTML links
-function convertLinks(content: string, allSlugs: Set<string>): string {
-  return content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
+// Anchor mapping: target slug -> anchor ID
+type AnchorMap = Map<string, string>
+
+// Convert [[wiki-links]] to HTML links, adding anchors and returning the mapping
+function convertLinks(content: string, allSlugs: Set<string>, sourceSlug: string): { html: string; anchors: AnchorMap } {
+  const anchors: AnchorMap = new Map()
+  const counter = new Map<string, number>()
+
+  const html = content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
     const parts = link.split('|')
-    const slug = parts[0].trim()
+    const targetSlug = parts[0].trim()
     const text = (parts[1] || parts[0]).trim()
-    const exists = allSlugs.has(slug)
+    const exists = allSlugs.has(targetSlug)
     const cls = exists ? '' : ' class="broken"'
-    return `<a href="/${slug}.html"${cls}>${text}</a>`
+
+    // Generate anchor ID (only first link to each target gets an anchor for backlinks)
+    const count = counter.get(targetSlug) || 0
+    counter.set(targetSlug, count + 1)
+
+    if (count === 0) {
+      // First link to this target - add anchor
+      const anchorId = `ref-${targetSlug.replace(/[^a-z0-9-]/gi, '-')}`
+      anchors.set(targetSlug, anchorId)
+      return `<a id="${anchorId}" href="/${targetSlug}.html"${cls}>${text}</a>`
+    }
+
+    return `<a href="/${targetSlug}.html"${cls}>${text}</a>`
   })
+
+  return { html, anchors }
 }
 
 // Build slug collision map (for disambiguation)
@@ -104,21 +124,33 @@ function build(): void {
     pages.set(slug, { slug, meta, body, links, file })
   }
 
-  // Backlink entry: source page slug + the link text used (if any)
+  // Backlink entry: source page slug + the link text used (if any) + anchor ID
   interface BacklinkEntry {
     sourceSlug: string
     linkText: string | null
+    anchorId?: string
+  }
+
+  // Store converted HTML and anchor maps per page
+  const convertedPages = new Map<string, { html: string; anchors: AnchorMap }>()
+  for (const [slug, page] of pages) {
+    convertedPages.set(slug, convertLinks(page.body, allSlugs, slug))
   }
 
   // Build backlinks index (deduplicated by source slug, keeps first linkText)
   const backlinks = new Map<string, BacklinkEntry[]>()
   for (const [slug, page] of pages) {
     const seen = new Set<string>() // dedupe multiple links to same target
+    const anchors = convertedPages.get(slug)!.anchors
     for (const link of page.links) {
       if (seen.has(link.slug)) continue
       seen.add(link.slug)
       if (!backlinks.has(link.slug)) backlinks.set(link.slug, [])
-      backlinks.get(link.slug)!.push({ sourceSlug: slug, linkText: link.linkText })
+      backlinks.get(link.slug)!.push({
+        sourceSlug: slug,
+        linkText: link.linkText,
+        anchorId: anchors.get(link.slug),
+      })
     }
   }
 
@@ -135,17 +167,18 @@ function build(): void {
   // Detect slug collisions for disambiguation
   const collisions = buildSlugCollisions(allSlugs)
 
-  // Helper to convert backlink entries to BacklinkItem with titles and link text
+  // Helper to convert backlink entries to BacklinkItem with titles, link text, and anchors
   const toBacklinkItems = (entries: BacklinkEntry[]): BacklinkItem[] =>
     entries.map((e) => ({
       slug: e.sourceSlug,
       title: pages.get(e.sourceSlug)?.meta.title || e.sourceSlug.split('/').pop() || e.sourceSlug,
       linkText: e.linkText || undefined,
+      anchorId: e.anchorId,
     }))
 
   // Render each page
   for (const [slug, page] of pages) {
-    const converted = convertLinks(page.body, allSlugs)
+    const converted = convertedPages.get(slug)!.html
     const html = marked.parse(converted) as string
     const title = page.meta.title || slug.split('/').pop() || slug
     const bl = backlinks.get(slug) || []
