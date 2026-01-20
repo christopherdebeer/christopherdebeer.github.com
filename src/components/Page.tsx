@@ -1,13 +1,13 @@
 import React from 'react'
 import { Backlinks } from './Backlinks.js'
-import { PageMeta, STATUS_ICONS, Status } from './types.js'
+import { BacklinkItem, PageMeta, STATUS_ICONS, Status } from './types.js'
 
 interface PageProps {
   title: string
   content: string
   meta: PageMeta
   slug: string
-  backlinks: string[]
+  backlinks: BacklinkItem[]
 }
 
 export function Page({ title, content, meta, slug, backlinks }: PageProps) {

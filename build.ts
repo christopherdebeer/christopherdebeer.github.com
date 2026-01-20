@@ -5,7 +5,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
 import { StubPage } from './src/components/StubPage.js'
-import type { PageMeta, PageData } from './src/components/types.js'
+import type { BacklinkItem, PageMeta, PageData } from './src/components/types.js'
 
 const SRC = './docs'
 const OUT = './dist'
@@ -125,6 +125,13 @@ function build(): void {
   // Detect slug collisions for disambiguation
   const collisions = buildSlugCollisions(allSlugs)
 
+  // Helper to convert backlink slugs to BacklinkItem with titles
+  const toBacklinkItems = (slugs: string[]): BacklinkItem[] =>
+    slugs.map((s) => ({
+      slug: s,
+      title: pages.get(s)?.meta.title || s.split('/').pop() || s,
+    }))
+
   // Render each page
   for (const [slug, page] of pages) {
     const converted = convertLinks(page.body, allSlugs)
@@ -137,7 +144,7 @@ function build(): void {
       content: html,
       meta: page.meta,
       slug,
-      backlinks: bl,
+      backlinks: toBacklinkItems(bl),
     })
 
     const out = '<!DOCTYPE html>\n' + renderToStaticMarkup(element)
@@ -163,7 +170,7 @@ function build(): void {
 
     const element = React.createElement(StubPage, {
       slug,
-      backlinks: bl,
+      backlinks: toBacklinkItems(bl),
       disambiguate,
     })
 

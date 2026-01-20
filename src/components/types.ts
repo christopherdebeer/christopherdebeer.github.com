@@ -4,6 +4,11 @@ export interface PageMeta {
   created?: string
 }
 
+export interface BacklinkItem {
+  slug: string
+  title: string
+}
+
 export interface PageData {
   slug: string
   meta: PageMeta
