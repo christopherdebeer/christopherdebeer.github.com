@@ -78,6 +78,34 @@ a.broken {
   padding-left: 1.2rem;
 }
 
+/* Stub pages (missing notes) */
+.stub-page .stub-notice {
+  color: var(--muted);
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.stub-page .stub-hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.stub-page .disambiguate-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.stub-page .disambiguate-list li {
+  margin: 0.5rem 0;
+}
+
+.stub-page .disambiguate-list .slug-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
 #edit-link {
   display: none;
 }
