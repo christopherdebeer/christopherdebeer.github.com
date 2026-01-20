@@ -24,6 +24,9 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
         <link rel="stylesheet" href="/assets/styles.css" />
       </head>
       <body>
+        <header className="site-header">
+          <a href="/" className="site-name">Garden</a>
+        </header>
         <div className="page">
           <article>
             <h1>
@@ -31,19 +34,14 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
             </h1>
             <div className="meta">
               {meta.created || ''}
-              <a href={`/edit.html?file=${srcPath}`} id="edit-link">
-                edit
-              </a>
             </div>
             <div dangerouslySetInnerHTML={{ __html: content }} />
           </article>
           <Backlinks links={backlinks} />
         </div>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if(sessionStorage.getItem('gh-token'))document.getElementById('edit-link').style.display='inline'`,
-          }}
-        />
+        <footer className="site-footer">
+          <a href={`/edit.html?file=${srcPath}`}>edit</a>
+        </footer>
       </body>
     </html>
   )

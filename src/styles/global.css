@@ -107,8 +107,37 @@ a.broken {
   font-size: 0.85rem;
 }
 
-#edit-link {
-  display: none;
+/* Site header and footer */
+.site-header {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+}
+
+.site-header .site-name {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.site-header .site-name:hover {
+  color: var(--fg);
+}
+
+.site-footer {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.site-footer a {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.site-footer a:hover {
+  color: var(--link);
 }
 
 /* Editor styles */
@@ -118,9 +147,39 @@ a.broken {
   padding: 1rem;
 }
 
-.editor-container h1 {
-  font-size: 1.3rem;
-  margin: 0 0 1rem;
+.editor-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.editor-header .site-name {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.editor-header .site-name:hover {
+  color: var(--fg);
+}
+
+.editor-header .editor-title {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.editor-header .editor-title::before {
+  content: '/';
+  margin-right: 0.5rem;
+}
+
+.auth-section {
+  margin-bottom: 1rem;
+}
+
+.editor-main {
+  margin-top: 1rem;
 }
 
 .row {

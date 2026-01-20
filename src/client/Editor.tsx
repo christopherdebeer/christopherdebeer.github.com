@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state'
 import {
   listFiles,
   getFile,
+  getFileRaw,
   saveFile,
   createFile,
   getStoredToken,
@@ -18,16 +19,17 @@ export function Editor() {
   const [files, setFiles] = useState<GitHubFile[]>([])
   const [currentFile, setCurrentFile] = useState<string | null>(null)
   const [currentSha, setCurrentSha] = useState<string | null>(null)
-  const [status, setStatus] = useState('Enter a PAT with repo scope to edit files.')
+  const [status, setStatus] = useState('')
   const [fileMeta, setFileMeta] = useState('')
   const [saving, setSaving] = useState(false)
+  const [readOnly, setReadOnly] = useState(false)
 
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
   const fileParam = new URLSearchParams(window.location.search).get('file')
 
-  // Initialize CodeMirror
+  // Initialize CodeMirror immediately
   useEffect(() => {
     if (!editorRef.current || viewRef.current) return
 
@@ -45,9 +47,29 @@ export function Editor() {
       viewRef.current?.destroy()
       viewRef.current = null
     }
-  }, [connected])
+  }, [])
 
-  const loadFile = useCallback(
+  // Load file from raw endpoint (no auth required)
+  const loadFileRaw = useCallback(async (path: string) => {
+    if (!path) return
+
+    setFileMeta('Loading...')
+    setReadOnly(true)
+    try {
+      const content = await getFileRaw(path)
+      viewRef.current?.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: content },
+      })
+      setCurrentFile(path)
+      setCurrentSha(null)
+      setFileMeta(content ? `${path} (read-only)` : `${path} (new file)`)
+    } catch (e) {
+      setFileMeta(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    }
+  }, [])
+
+  // Load file with API (gets SHA for editing)
+  const loadFileWithApi = useCallback(
     async (path: string) => {
       if (!path || !token) {
         viewRef.current?.dispatch({
@@ -56,6 +78,7 @@ export function Editor() {
         setCurrentFile(null)
         setCurrentSha(null)
         setFileMeta('')
+        setReadOnly(false)
         return
       }
 
@@ -68,8 +91,17 @@ export function Editor() {
         setCurrentFile(path)
         setCurrentSha(sha)
         setFileMeta(path)
+        setReadOnly(false)
       } catch (e) {
-        setFileMeta(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+        // If API fails, fall back to raw
+        if ((e as Error).message.includes('404')) {
+          setFileMeta(`${path} (new file)`)
+          setCurrentFile(path)
+          setCurrentSha(null)
+          setReadOnly(false)
+        } else {
+          setFileMeta(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+        }
       }
     },
     [token]
@@ -86,38 +118,65 @@ export function Editor() {
       setStatus(`Connected. ${fileList.length} files found.`)
       storeToken(token)
 
-      // Auto-load file if specified in URL
-      if (fileParam && fileList.some((f) => f.path === fileParam)) {
-        setTimeout(() => loadFile(fileParam), 100)
+      // If we have a file loaded in read-only mode, reload with API for editing
+      if (currentFile) {
+        await loadFileWithApi(currentFile)
+      } else if (fileParam) {
+        await loadFileWithApi(fileParam)
       }
     } catch (e) {
       setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
-  }, [token, fileParam, loadFile])
+  }, [token, fileParam, currentFile, loadFileWithApi])
 
-  // Auto-connect if token stored and file param provided
+  // Auto-load file from URL param immediately (read-only)
   useEffect(() => {
-    if (token && fileParam && !connected) {
-      connect()
+    if (fileParam && !currentFile) {
+      // If we have a stored token, try to connect and load with API
+      if (token) {
+        connect()
+      } else {
+        // Otherwise load read-only
+        loadFileRaw(fileParam)
+        setStatus('Enter a PAT with repo scope to save changes.')
+      }
+    } else if (!fileParam) {
+      setStatus('Enter a PAT with repo scope to edit files.')
     }
   }, [])
 
   const handleSave = async () => {
-    if (!currentFile || !currentSha || !viewRef.current) return
+    if (!currentFile || !viewRef.current || !token) return
 
     setSaving(true)
     setFileMeta('Saving...')
     try {
       const content = viewRef.current.state.doc.toString()
-      const result = await saveFile(
-        token,
-        currentFile,
-        content,
-        currentSha,
-        `Update ${currentFile.split('/').pop()}`
-      )
-      setCurrentSha(result.sha)
+      if (currentSha) {
+        // Update existing file
+        const result = await saveFile(
+          token,
+          currentFile,
+          content,
+          currentSha,
+          `Update ${currentFile.split('/').pop()}`
+        )
+        setCurrentSha(result.sha)
+      } else {
+        // Create new file
+        const result = await createFile(
+          token,
+          currentFile,
+          content,
+          `Add ${currentFile.split('/').pop()}`
+        )
+        setCurrentSha(result.sha)
+        // Refresh file list
+        const fileList = await listFiles(token)
+        setFiles(fileList)
+      }
       setFileMeta(`${currentFile} (saved)`)
+      setReadOnly(false)
     } catch (e) {
       setFileMeta(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
@@ -132,7 +191,7 @@ export function Editor() {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
-    const path = `src/${slug}.md`
+    const path = `docs/${slug}.md`
     const template = `---
 title: ${name}
 status: seedling
@@ -141,22 +200,26 @@ created: ${new Date().toISOString().split('T')[0]}
 
 `
 
-    setFileMeta('Creating...')
-    try {
-      await createFile(token, path, template, `Add ${slug}.md`)
-      const fileList = await listFiles(token)
-      setFiles(fileList)
-      await loadFile(path)
-    } catch (e) {
-      setFileMeta(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    }
+    viewRef.current?.dispatch({
+      changes: { from: 0, to: viewRef.current.state.doc.length, insert: template },
+    })
+    setCurrentFile(path)
+    setCurrentSha(null)
+    setFileMeta(`${path} (unsaved)`)
+    setReadOnly(false)
   }
+
+  const canSave = connected && currentFile && !saving && !readOnly
+  const canCreate = connected && currentFile && !currentSha && !saving
 
   return (
     <div className="editor-container">
-      <h1>Edit Garden</h1>
+      <header className="editor-header">
+        <a href="/" className="site-name">Garden</a>
+        <span className="editor-title">Edit</span>
+      </header>
 
-      <div>
+      <div className="auth-section">
         <div className="row">
           <input
             type="password"
@@ -167,20 +230,20 @@ created: ${new Date().toISOString().split('T')[0]}
               storeToken(e.target.value)
             }}
           />
-          <button onClick={connect} disabled={connected}>
-            Connect
+          <button onClick={connect} disabled={connected || !token}>
+            {connected ? 'Connected' : 'Connect'}
           </button>
         </div>
-        <div className="status">{status}</div>
+        {status && <div className="status">{status}</div>}
       </div>
 
-      {connected && (
-        <div style={{ marginTop: '1rem' }}>
+      <div className="editor-main">
+        {connected && (
           <div className="row">
             <select
               id="files"
               value={currentFile || ''}
-              onChange={(e) => loadFile(e.target.value)}
+              onChange={(e) => loadFileWithApi(e.target.value)}
             >
               <option value="">Select a file...</option>
               {files.map((f) => (
@@ -190,16 +253,25 @@ created: ${new Date().toISOString().split('T')[0]}
               ))}
             </select>
             <div className="button-group">
-              <button onClick={handleSave} disabled={!currentFile || saving}>
-                Save
+              <button onClick={handleSave} disabled={!canSave && !canCreate}>
+                {canCreate ? 'Create' : 'Save'}
               </button>
               <button onClick={handleNewFile}>New</button>
             </div>
           </div>
-          <div className="file-meta">{fileMeta}</div>
-          <div ref={editorRef} />
-        </div>
-      )}
+        )}
+        {!connected && currentFile && (
+          <div className="row">
+            <div className="button-group">
+              <button onClick={handleSave} disabled={!connected}>
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+        {fileMeta && <div className="file-meta">{fileMeta}</div>}
+        <div ref={editorRef} />
+      </div>
     </div>
   )
 }

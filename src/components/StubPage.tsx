@@ -35,14 +35,12 @@ export function StubPage({ slug, backlinks, disambiguate }: StubPageProps) {
         <link rel="stylesheet" href="/assets/styles.css" />
       </head>
       <body>
+        <header className="site-header">
+          <a href="/" className="site-name">Garden</a>
+        </header>
         <div className="page stub-page">
           <article>
             <h1>{title}</h1>
-            <div className="meta">
-              <a href={`/edit.html?file=${srcPath}`} id="edit-link">
-                create this note
-              </a>
-            </div>
 
             {hasDisambiguation ? (
               <>
@@ -84,11 +82,9 @@ export function StubPage({ slug, backlinks, disambiguate }: StubPageProps) {
           </article>
           <Backlinks links={backlinks} />
         </div>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if(sessionStorage.getItem('gh-token'))document.getElementById('edit-link').style.display='inline'`,
-          }}
-        />
+        <footer className="site-footer">
+          <a href={`/edit.html?file=${srcPath}`}>create this note</a>
+        </footer>
       </body>
     </html>
   )
