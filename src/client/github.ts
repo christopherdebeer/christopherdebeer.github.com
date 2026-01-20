@@ -1,6 +1,6 @@
-const OWNER = 'christopherdebeer'
-const REPO = 'garden'
-const BRANCH = 'master'
+const OWNER = import.meta.env.VITE_GITHUB_OWNER || 'christopherdebeer'
+const REPO = import.meta.env.VITE_GITHUB_REPO || 'garden'
+const BRANCH = import.meta.env.VITE_GITHUB_BRANCH || 'master'
 const SRC_PATH = 'docs'
 
 export interface GitHubFile {
