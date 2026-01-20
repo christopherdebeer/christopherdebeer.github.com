@@ -46,6 +46,18 @@ export async function getFile(token: string, path: string): Promise<FileContent>
   return { content: atob(data.content), sha: data.sha }
 }
 
+// Read file content using raw.githubusercontent.com (no auth required for public repos)
+export async function getFileRaw(path: string): Promise<string> {
+  const res = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${path}`)
+  if (!res.ok) {
+    if (res.status === 404) {
+      return '' // File doesn't exist yet
+    }
+    throw new Error(`Failed to fetch file: ${res.status}`)
+  }
+  return res.text()
+}
+
 export async function saveFile(
   token: string,
   path: string,
