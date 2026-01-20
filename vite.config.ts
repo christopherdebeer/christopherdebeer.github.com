@@ -7,7 +7,7 @@ export default defineConfig({
   root: 'src/client',
   base: '/',
   build: {
-    outDir: '../../docs',
+    outDir: '../../dist',
     emptyOutDir: false,
     rollupOptions: {
       input: {

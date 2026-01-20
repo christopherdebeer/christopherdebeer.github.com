@@ -6,8 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
 import type { PageMeta, PageData } from './src/components/types.js'
 
-const SRC = './src'
-const OUT = './docs'
+const SRC = './docs'
+const OUT = './dist'
 
 // Parse YAML frontmatter (minimal implementation)
 function parseFrontmatter(content: string): { meta: PageMeta; body: string } {

@@ -13,7 +13,7 @@ interface PageProps {
 export function Page({ title, content, meta, slug, backlinks }: PageProps) {
   const status = (meta.status || 'seedling') as Status
   const statusIcon = STATUS_ICONS[status] || ''
-  const srcPath = `src/${slug}.md`
+  const srcPath = `docs/${slug}.md`
 
   return (
     <html lang="en">
