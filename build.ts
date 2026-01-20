@@ -4,6 +4,7 @@ import { marked } from 'marked'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
+import { StubPage } from './src/components/StubPage.js'
 import type { PageMeta, PageData } from './src/components/types.js'
 
 const SRC = './docs'
@@ -65,6 +66,22 @@ function convertLinks(content: string, allSlugs: Set<string>): string {
   })
 }
 
+// Build slug collision map (for disambiguation)
+function buildSlugCollisions(allSlugs: Set<string>): Map<string, string[]> {
+  const byBaseName = new Map<string, string[]>()
+  for (const slug of allSlugs) {
+    const baseName = slug.split('/').pop()!
+    if (!byBaseName.has(baseName)) byBaseName.set(baseName, [])
+    byBaseName.get(baseName)!.push(slug)
+  }
+  // Only return entries with collisions
+  const collisions = new Map<string, string[]>()
+  for (const [name, slugs] of byBaseName) {
+    if (slugs.length > 1) collisions.set(name, slugs)
+  }
+  return collisions
+}
+
 // Main build
 function build(): void {
   // Clean output
@@ -95,6 +112,19 @@ function build(): void {
     }
   }
 
+  // Find missing slugs (linked but no file exists)
+  const missingSlugs = new Set<string>()
+  for (const page of pages.values()) {
+    for (const link of page.links) {
+      if (!allSlugs.has(link)) {
+        missingSlugs.add(link)
+      }
+    }
+  }
+
+  // Detect slug collisions for disambiguation
+  const collisions = buildSlugCollisions(allSlugs)
+
   // Render each page
   for (const [slug, page] of pages) {
     const converted = convertLinks(page.body, allSlugs)
@@ -117,7 +147,35 @@ function build(): void {
     console.log(`  ${slug}`)
   }
 
-  console.log(`\nBuilt ${pages.size} pages`)
+  // Generate stub pages for missing links
+  let stubCount = 0
+  for (const slug of missingSlugs) {
+    const bl = backlinks.get(slug) || []
+    const baseName = slug.split('/').pop()!
+
+    // Check if this is an ambiguous short link to existing pages
+    const disambiguate = collisions.has(baseName)
+      ? collisions.get(baseName)!.map((s) => ({
+          slug: s,
+          title: pages.get(s)?.meta.title || s.split('/').pop() || s,
+        }))
+      : undefined
+
+    const element = React.createElement(StubPage, {
+      slug,
+      backlinks: bl,
+      disambiguate,
+    })
+
+    const out = '<!DOCTYPE html>\n' + renderToStaticMarkup(element)
+    const outPath = toOut(slug)
+    mkdirSync(dirname(outPath), { recursive: true })
+    writeFileSync(outPath, out)
+    console.log(`  ${slug} (stub)`)
+    stubCount++
+  }
+
+  console.log(`\nBuilt ${pages.size} pages, ${stubCount} stubs`)
 }
 
 build()
