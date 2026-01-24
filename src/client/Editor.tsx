@@ -40,6 +40,13 @@ function clearBackup(): void {
   localStorage.removeItem(BACKUP_KEY)
 }
 
+// Extract filename from path
+function getFileName(path: string | null): string {
+  if (!path) return 'Untitled'
+  const name = path.split('/').pop() || path
+  return name.replace(/\.md$/, '')
+}
+
 export function Editor() {
   const [token, setToken] = useState(getStoredToken)
   const [connected, setConnected] = useState(false)
@@ -50,6 +57,7 @@ export function Editor() {
   const [saving, setSaving] = useState(false)
   const [readOnly, setReadOnly] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -97,7 +105,7 @@ export function Editor() {
       setDirty(true)
       if (backup.path) {
         setCurrentFile(backup.path)
-        setStatus('Restored unsaved changes from backup.')
+        setStatus('Restored from backup')
       }
     }
 
@@ -123,7 +131,7 @@ export function Editor() {
       setCurrentSha(null)
       setDirty(false)
       clearBackup()
-      setStatus(content ? '(read-only)' : '(new file)')
+      setStatus(content ? 'Read-only' : 'New')
     } catch (e) {
       setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
@@ -157,6 +165,7 @@ export function Editor() {
         clearBackup()
         setReadOnly(false)
         setStatus('')
+        setPanelOpen(false)
       } catch (e) {
         // If API fails, fall back to raw
         if ((e as Error).message.includes('404')) {
@@ -165,7 +174,7 @@ export function Editor() {
           setCurrentSha(null)
           setDirty(false)
           setReadOnly(false)
-          setStatus('(new file)')
+          setStatus('New')
         } else {
           setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
         }
@@ -191,19 +200,19 @@ export function Editor() {
           const { sha } = await getFile(token, targetFile)
           setCurrentSha(sha)
           setReadOnly(false)
-          setStatus(`Connected. Unsaved changes preserved.`)
-        } catch (e) {
+          setStatus('Connected')
+        } catch {
           // File doesn't exist yet, that's fine
           setCurrentSha(null)
           setReadOnly(false)
-          setStatus(`Connected. Ready to create file.`)
+          setStatus('Ready to create')
         }
       } else if (targetFile) {
         // No dirty edits, load fresh
         await loadFileWithApi(targetFile)
-        setStatus(`Connected. ${fileList.length} files found.`)
+        setStatus('')
       } else {
-        setStatus(`Connected. ${fileList.length} files found.`)
+        setStatus(`${fileList.length} files`)
       }
     } catch (e) {
       setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
@@ -219,10 +228,10 @@ export function Editor() {
       } else {
         // Otherwise load read-only
         loadFileRaw(fileParam)
-        setStatus('Enter a PAT with repo scope to save changes.')
+        setPanelOpen(true)
       }
-    } else if (!fileParam) {
-      setStatus('Enter a PAT with repo scope to edit files.')
+    } else if (!fileParam && !token) {
+      setPanelOpen(true)
     }
   }, [])
 
@@ -261,6 +270,8 @@ export function Editor() {
       clearBackup()
       setStatus('Saved')
       setReadOnly(false)
+      // Clear status after delay
+      setTimeout(() => setStatus(''), 2000)
     } catch (e) {
       setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
@@ -268,13 +279,14 @@ export function Editor() {
   }
 
   const handleNewFile = async () => {
-    const name = prompt('Filename (without .md):')
+    const name = prompt('Note title:')
     if (!name) return
 
     const slug = name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
     const path = `docs/${slug}.md`
     const template = `---
 title: ${name}
@@ -293,76 +305,132 @@ created: ${new Date().toISOString().split('T')[0]}
     setDirty(true)
     saveBackup(path, template)
     setReadOnly(false)
-    setStatus('(new file)')
+    setStatus('New')
+    setPanelOpen(false)
+  }
+
+  const handleBack = () => {
+    if (currentFile) {
+      const slug = currentFile.replace(/^docs\//, '').replace(/\.md$/, '')
+      window.location.href = `/${slug}.html`
+    } else {
+      window.location.href = '/'
+    }
   }
 
   const canSave = connected && currentFile && !saving && !readOnly
   const canCreate = connected && currentFile && !currentSha && !saving
+  const showSaveButton = canSave || canCreate
 
   return (
-    <div className="editor-container">
-      <header className="editor-header">
-        <a href="/" className="site-name">Garden</a>
-        <span className="editor-title">Edit</span>
-      </header>
+    <div className="editor-app">
+      {/* Fixed toolbar */}
+      <header className="editor-toolbar">
+        <button className="toolbar-btn back-btn" onClick={handleBack} title="Back">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 4L6 10L12 16" />
+          </svg>
+        </button>
 
-      <div className="auth-section">
-        <div className="row">
-          <input
-            type="password"
-            placeholder="GitHub Personal Access Token"
-            value={token}
-            onChange={(e) => {
-              setToken(e.target.value)
-              storeToken(e.target.value)
-            }}
-          />
-          <button onClick={connect} disabled={connected || !token}>
-            {connected ? 'Connected' : 'Connect'}
+        <div className="toolbar-title">
+          <span className="file-name">{dirty ? '* ' : ''}{getFileName(currentFile)}</span>
+          {status && <span className="toolbar-status">{status}</span>}
+        </div>
+
+        <div className="toolbar-actions">
+          {showSaveButton && (
+            <button
+              className="toolbar-btn save-btn"
+              onClick={handleSave}
+              disabled={saving}
+              title={canCreate ? 'Create' : 'Save'}
+            >
+              {saving ? (
+                <span className="saving-indicator" />
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 10L8 13L15 6" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          <button
+            className={`toolbar-btn menu-btn ${panelOpen ? 'active' : ''}`}
+            onClick={() => setPanelOpen(!panelOpen)}
+            title="Settings"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <circle cx="10" cy="4" r="1.5" />
+              <circle cx="10" cy="10" r="1.5" />
+              <circle cx="10" cy="16" r="1.5" />
+            </svg>
           </button>
         </div>
-        {status && <div className="status">{status}</div>}
-      </div>
+      </header>
 
-      <div className="editor-main">
-        {connected && (
-          <div className="row">
-            <select
-              id="files"
-              value={currentFile || ''}
-              onChange={(e) => loadFileWithApi(e.target.value)}
-            >
-              <option value="">Select a file...</option>
-              {files.map((f) => (
-                <option key={f.path} value={f.path}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-            <div className="button-group">
-              <button onClick={handleSave} disabled={!canSave && !canCreate}>
-                {canCreate ? 'Create' : 'Save'}
-              </button>
-              <button onClick={handleNewFile}>New</button>
-            </div>
-          </div>
-        )}
-        {!connected && currentFile && (
-          <div className="row">
-            <div className="button-group">
-              <button onClick={handleSave} disabled={!connected}>
-                Save
+      {/* Settings panel */}
+      {panelOpen && (
+        <div className="settings-panel">
+          <div className="panel-section">
+            <label className="panel-label">GitHub Token</label>
+            <div className="panel-row">
+              <input
+                type="password"
+                className="panel-input"
+                placeholder="Personal access token"
+                value={token}
+                onChange={(e) => {
+                  setToken(e.target.value)
+                  storeToken(e.target.value)
+                }}
+              />
+              <button
+                className="panel-btn"
+                onClick={connect}
+                disabled={connected || !token}
+              >
+                {connected ? 'Connected' : 'Connect'}
               </button>
             </div>
           </div>
-        )}
-        {currentFile && (
-          <div className="file-meta">
-            {dirty ? '* ' : ''}{currentFile}{status ? ` ${status}` : ''}
-          </div>
-        )}
-        <div ref={editorRef} />
-      </div>
+
+          {connected && (
+            <>
+              <div className="panel-section">
+                <label className="panel-label">Open File</label>
+                <select
+                  className="panel-select"
+                  value={currentFile || ''}
+                  onChange={(e) => loadFileWithApi(e.target.value)}
+                >
+                  <option value="">Select...</option>
+                  {files.map((f) => (
+                    <option key={f.path} value={f.path}>
+                      {f.name.replace(/\.md$/, '')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="panel-section">
+                <button className="panel-btn-full" onClick={handleNewFile}>
+                  New Note
+                </button>
+              </div>
+            </>
+          )}
+
+          {!connected && (
+            <p className="panel-hint">
+              Enter a GitHub PAT with repo scope to edit files.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Editor area */}
+      <div className="editor-area" ref={editorRef} />
     </div>
   )
 }
