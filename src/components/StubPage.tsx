@@ -39,7 +39,7 @@ export function StubPage({ slug, backlinks, disambiguate }: StubPageProps) {
         <header className="site-header">
           <a href="/" className="site-name">Garden</a>
         </header>
-        <div className="page stub-page">
+        <main className="page stub-page">
           <article>
             <h1>{title}</h1>
 
@@ -82,9 +82,9 @@ export function StubPage({ slug, backlinks, disambiguate }: StubPageProps) {
             )}
           </article>
           <Backlinks links={backlinks} />
-        </div>
+        </main>
         <footer className="site-footer">
-          <a href={`/edit.html?file=${srcPath}`}>create this note</a>
+          <a href={`/edit.html?file=${srcPath}`}>Create Note</a>
         </footer>
       </body>
     </html>

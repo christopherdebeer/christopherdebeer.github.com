@@ -1,6 +1,6 @@
 import React from 'react'
 import { Backlinks } from './Backlinks.js'
-import { BacklinkItem, PageMeta, STATUS_ICONS, Status } from './types.js'
+import { BacklinkItem, PageMeta, STATUS_LABELS, Status } from './types.js'
 
 interface PageProps {
   title: string
@@ -12,7 +12,7 @@ interface PageProps {
 
 export function Page({ title, content, meta, slug, backlinks }: PageProps) {
   const status = (meta.status || 'seedling') as Status
-  const statusIcon = STATUS_ICONS[status] || ''
+  const statusLabel = STATUS_LABELS[status]
   const srcPath = `docs/${slug}.md`
 
   return (
@@ -27,10 +27,11 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
         <header className="site-header">
           <a href="/" className="site-name">Garden</a>
         </header>
-        <div className="page">
+        <main className="page">
           <article>
             <h1>
-              {statusIcon} {title}
+              <span className={`status-indicator ${status}`}>{statusLabel}</span>
+              {title}
             </h1>
             <div className="meta">
               {meta.created || ''}
@@ -38,9 +39,9 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
             <div dangerouslySetInnerHTML={{ __html: content }} />
           </article>
           <Backlinks links={backlinks} />
-        </div>
+        </main>
         <footer className="site-footer">
-          <a href={`/edit.html?file=${srcPath}`}>edit</a>
+          <a href={`/edit.html?file=${srcPath}`}>Edit</a>
         </footer>
       </body>
     </html>

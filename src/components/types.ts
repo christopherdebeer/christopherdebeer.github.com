@@ -25,6 +25,14 @@ export interface PageData {
 
 export type Status = 'seedling' | 'budding' | 'evergreen'
 
+// Refined status labels for Braun-style design
+export const STATUS_LABELS: Record<Status, string> = {
+  seedling: 'Seedling',
+  budding: 'Budding',
+  evergreen: 'Evergreen',
+}
+
+// Legacy: keeping for backwards compatibility if needed
 export const STATUS_ICONS: Record<Status, string> = {
   seedling: '🌱',
   budding: '🌿',
