@@ -264,11 +264,32 @@ li:last-child {
 
 .meta a {
   color: var(--fg-muted);
-  margin-left: var(--space-3);
 }
 
 .meta a:hover {
   color: var(--accent);
+}
+
+.meta-date a {
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border);
+}
+
+.meta-date a:hover {
+  border-bottom-color: var(--accent);
+}
+
+.meta-updated {
+  color: var(--fg-muted);
+}
+
+.meta-updated a {
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border);
+}
+
+.meta-updated a:hover {
+  border-bottom-color: var(--accent);
 }
 
 /* Article content typography */

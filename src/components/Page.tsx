@@ -15,6 +15,9 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
   const statusLabel = STATUS_LABELS[status]
   const srcPath = `docs/${slug}.md`
 
+  // Don't link log pages to themselves
+  const isLogPage = slug.startsWith('log/')
+
   return (
     <html lang="en">
       <head>
@@ -34,7 +37,25 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
               {title}
             </h1>
             <div className="meta">
-              {meta.created || ''}
+              {meta.created && (
+                <span className="meta-date">
+                  {isLogPage ? (
+                    meta.created
+                  ) : (
+                    <a href={`/log/${meta.created}.html`}>{meta.created}</a>
+                  )}
+                </span>
+              )}
+              {meta.updated && meta.updated !== meta.created && (
+                <span className="meta-updated">
+                  {' · updated '}
+                  {isLogPage ? (
+                    meta.updated
+                  ) : (
+                    <a href={`/log/${meta.updated}.html`}>{meta.updated}</a>
+                  )}
+                </span>
+              )}
             </div>
             <div dangerouslySetInnerHTML={{ __html: content }} />
           </article>
