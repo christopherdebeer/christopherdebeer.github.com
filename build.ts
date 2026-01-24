@@ -5,10 +5,66 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
 import { StubPage } from './src/components/StubPage.js'
-import type { BacklinkItem, PageMeta, PageData, LinkInfo } from './src/components/types.js'
+import { LogPage } from './src/components/LogPage.js'
+import type { BacklinkItem, PageMeta, PageData, LinkInfo, LogPageMeta, DateInfo } from './src/components/types.js'
 
 const SRC = './docs'
 const OUT = './dist'
+
+// ============================================================================
+// Date utilities for log system
+// ============================================================================
+
+// Get ISO week number for a date
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+// Parse a date string (YYYY-MM-DD) into DateInfo
+function parseDateInfo(dateStr: string): DateInfo | null {
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  const date = new Date(`${year}-${month}-${day}T00:00:00Z`)
+  if (isNaN(date.getTime())) return null
+
+  const weekNum = getWeekNumber(date)
+  const weekStr = `${year}-w${weekNum.toString().padStart(2, '0')}`
+
+  return {
+    date: dateStr,
+    year,
+    month: `${year}-${month}`,
+    week: weekStr,
+  }
+}
+
+// Get all date slugs a note should link to based on its dates
+function getDateSlugs(meta: PageMeta): { created: DateInfo | null; updated: DateInfo | null } {
+  return {
+    created: meta.created ? parseDateInfo(meta.created) : null,
+    updated: meta.updated ? parseDateInfo(meta.updated) : null,
+  }
+}
+
+// Log entry tracking which notes were created/updated on which dates
+interface LogEntry {
+  slug: string
+  title: string
+}
+
+interface LogData {
+  // Maps date slug (e.g., "2024-01-15", "2024-w03", "2024-01", "2024") to notes
+  created: Map<string, LogEntry[]>
+  updated: Map<string, LogEntry[]>
+  // All date slugs that have activity
+  allDates: Set<string>
+}
 
 // Parse YAML frontmatter (minimal implementation)
 function parseFrontmatter(content: string): { meta: PageMeta; body: string } {
@@ -193,7 +249,200 @@ function build(): void {
     stubCount++
   }
 
-  console.log(`\nBuilt ${pages.size} pages, ${stubCount} stubs`)
+  // ============================================================================
+  // Build log system - date-based pages with temporal navigation
+  // ============================================================================
+
+  const logData: LogData = {
+    created: new Map(),
+    updated: new Map(),
+    allDates: new Set(),
+  }
+
+  // Collect all date entries from pages
+  for (const [slug, page] of pages) {
+    // Skip log pages themselves
+    if (slug.startsWith('log/')) continue
+
+    const title = page.meta.title || slug.split('/').pop() || slug
+    const entry: LogEntry = { slug, title }
+    const dates = getDateSlugs(page.meta)
+
+    if (dates.created) {
+      // Add to day, week, month, year
+      for (const dateSlug of [dates.created.date, dates.created.week, dates.created.month, dates.created.year]) {
+        if (!logData.created.has(dateSlug)) logData.created.set(dateSlug, [])
+        logData.created.get(dateSlug)!.push(entry)
+        logData.allDates.add(dateSlug)
+      }
+    }
+
+    if (dates.updated && dates.updated.date !== dates.created?.date) {
+      // Add to day, week, month, year (only if different from created)
+      for (const dateSlug of [dates.updated.date, dates.updated.week, dates.updated.month, dates.updated.year]) {
+        if (!logData.updated.has(dateSlug)) logData.updated.set(dateSlug, [])
+        logData.updated.get(dateSlug)!.push(entry)
+        logData.allDates.add(dateSlug)
+      }
+    }
+  }
+
+  // Helper to determine log period from slug
+  function getLogPeriod(dateSlug: string): LogPageMeta['period'] {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateSlug)) return 'day'
+    if (/^\d{4}-w\d{2}$/.test(dateSlug)) return 'week'
+    if (/^\d{4}-\d{2}$/.test(dateSlug)) return 'month'
+    if (/^\d{4}$/.test(dateSlug)) return 'year'
+    return 'day'
+  }
+
+  // Helper to build LogPageMeta from date slug
+  function buildLogMeta(dateSlug: string): LogPageMeta {
+    const period = getLogPeriod(dateSlug)
+    const year = dateSlug.slice(0, 4)
+
+    const meta: LogPageMeta = { period, date: dateSlug, year }
+
+    if (period === 'day') {
+      const dateInfo = parseDateInfo(dateSlug)
+      if (dateInfo) {
+        meta.month = dateInfo.month
+        meta.week = dateInfo.week
+        meta.day = dateSlug
+      }
+    } else if (period === 'week') {
+      meta.week = dateSlug
+      // Approximate month from week (use middle of week)
+      const weekNum = parseInt(dateSlug.split('-w')[1], 10)
+      const approxMonth = Math.min(12, Math.max(1, Math.ceil(weekNum / 4.33)))
+      meta.month = `${year}-${approxMonth.toString().padStart(2, '0')}`
+    } else if (period === 'month') {
+      meta.month = dateSlug
+    }
+
+    return meta
+  }
+
+  // Helper to get child periods for a log page
+  function getLogChildren(dateSlug: string, period: LogPageMeta['period']): { slug: string; title: string; count: number }[] {
+    const children: { slug: string; title: string; count: number }[] = []
+
+    if (period === 'year') {
+      // Get all months in this year
+      const year = dateSlug
+      for (let m = 1; m <= 12; m++) {
+        const monthSlug = `${year}-${m.toString().padStart(2, '0')}`
+        const count = (logData.created.get(monthSlug)?.length || 0) + (logData.updated.get(monthSlug)?.length || 0)
+        if (count > 0 || logData.allDates.has(monthSlug)) {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          children.push({ slug: monthSlug, title: monthNames[m - 1], count })
+        }
+      }
+    } else if (period === 'month') {
+      // Get all days in this month that have activity
+      const [year, month] = dateSlug.split('-')
+      const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate()
+      for (let d = 1; d <= daysInMonth; d++) {
+        const daySlug = `${dateSlug}-${d.toString().padStart(2, '0')}`
+        const count = (logData.created.get(daySlug)?.length || 0) + (logData.updated.get(daySlug)?.length || 0)
+        if (count > 0) {
+          children.push({ slug: daySlug, title: d.toString(), count })
+        }
+      }
+    } else if (period === 'week') {
+      // Get all days in this week that have activity
+      const [year, weekPart] = dateSlug.split('-w')
+      const weekNum = parseInt(weekPart, 10)
+      // Find first day of week (approximate)
+      const jan1 = new Date(parseInt(year), 0, 1)
+      const daysOffset = (weekNum - 1) * 7 - jan1.getDay() + 1
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(parseInt(year), 0, daysOffset + i + 1)
+        if (d.getFullYear() === parseInt(year) || (weekNum === 1 && d.getMonth() === 11)) {
+          const daySlug = d.toISOString().split('T')[0]
+          const count = (logData.created.get(daySlug)?.length || 0) + (logData.updated.get(daySlug)?.length || 0)
+          if (count > 0) {
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            children.push({ slug: daySlug, title: `${dayNames[d.getDay()]} ${d.getDate()}`, count })
+          }
+        }
+      }
+    }
+
+    return children
+  }
+
+  // Convert log entries to BacklinkItems
+  const toLogBacklinkItems = (entries: LogEntry[]): BacklinkItem[] =>
+    entries.map((e) => ({ slug: e.slug, title: e.title }))
+
+  // Render log pages
+  let logCount = 0
+  mkdirSync(join(OUT, 'log'), { recursive: true })
+
+  for (const dateSlug of logData.allDates) {
+    const meta = buildLogMeta(dateSlug)
+    const created = logData.created.get(dateSlug) || []
+    const updated = logData.updated.get(dateSlug) || []
+    const children = getLogChildren(dateSlug, meta.period)
+    const bl = backlinks.get(`log/${dateSlug}`) || []
+
+    const element = React.createElement(LogPage, {
+      meta,
+      backlinks: toBacklinkItems(bl),
+      created: toLogBacklinkItems(created),
+      updated: toLogBacklinkItems(updated),
+      children: children.length > 0 ? children : undefined,
+    })
+
+    const out = '<!DOCTYPE html>\n' + renderToStaticMarkup(element)
+    writeFileSync(join(OUT, 'log', `${dateSlug}.html`), out)
+    console.log(`  log/${dateSlug}`)
+    logCount++
+  }
+
+  // Generate log index page
+  const years = Array.from(logData.allDates)
+    .filter((d) => /^\d{4}$/.test(d))
+    .sort()
+    .reverse()
+
+  const logIndexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log — Garden</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="site-name">Garden</a>
+  </header>
+  <main class="page log-index">
+    <article>
+      <h1>Log</h1>
+      <p class="log-description">Notes organized by when they were created or updated.</p>
+      ${years.length > 0 ? `
+      <ul class="log-years">
+        ${years.map((y) => {
+          const count = (logData.created.get(y)?.length || 0)
+          return `<li><a href="/log/${y}.html">${y}</a> <span class="log-count">${count} notes</span></li>`
+        }).join('\n        ')}
+      </ul>
+      ` : '<p class="stub-notice">No dated notes yet.</p>'}
+    </article>
+  </main>
+  <footer class="site-footer">
+    <a href="/edit.html?capture=today">Capture to Today</a>
+  </footer>
+</body>
+</html>`
+
+  writeFileSync(join(OUT, 'log.html'), logIndexHtml)
+  console.log('  log (index)')
+
+  console.log(`\nBuilt ${pages.size} pages, ${stubCount} stubs, ${logCount} log pages`)
 }
 
 build()
