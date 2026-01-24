@@ -223,49 +223,8 @@ export function Editor() {
     [token]
   )
 
-  const connect = useCallback(async () => {
-    if (!token) return
-
-    setStatus('Connecting...')
-    try {
-      const fileList = await listFiles(token)
-      setFiles(fileList)
-      setConnected(true)
-      storeToken(token)
-
-      // Handle capture mode after connecting
-      if (captureMode) {
-        await initCaptureMode()
-        return
-      }
-
-      const targetFile = currentFile || fileParam
-      if (targetFile && dirty) {
-        // Preserve dirty edits - just get SHA for saving
-        try {
-          const { sha } = await getFile(token, targetFile)
-          setCurrentSha(sha)
-          setReadOnly(false)
-          setStatus('Connected')
-        } catch {
-          // File doesn't exist yet, that's fine
-          setCurrentSha(null)
-          setReadOnly(false)
-          setStatus('Ready to create')
-        }
-      } else if (targetFile) {
-        // No dirty edits, load fresh
-        await loadFileWithApi(targetFile)
-        setStatus('')
-      } else {
-        setStatus(`${fileList.length} files`)
-      }
-    } catch (e) {
-      setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    }
-  }, [token, fileParam, currentFile, dirty, loadFileWithApi, captureMode, initCaptureMode])
-
   // Handle capture mode - load today's log and prepare to append
+  // NOTE: Must be defined before connect() which depends on it
   const initCaptureMode = useCallback(async () => {
     if (!token) {
       setPanelOpen(true)
@@ -315,6 +274,48 @@ export function Editor() {
     // Clear URL params after processing
     window.history.replaceState(null, '', '/edit.html')
   }, [token, captureContent])
+
+  const connect = useCallback(async () => {
+    if (!token) return
+
+    setStatus('Connecting...')
+    try {
+      const fileList = await listFiles(token)
+      setFiles(fileList)
+      setConnected(true)
+      storeToken(token)
+
+      // Handle capture mode after connecting
+      if (captureMode) {
+        await initCaptureMode()
+        return
+      }
+
+      const targetFile = currentFile || fileParam
+      if (targetFile && dirty) {
+        // Preserve dirty edits - just get SHA for saving
+        try {
+          const { sha } = await getFile(token, targetFile)
+          setCurrentSha(sha)
+          setReadOnly(false)
+          setStatus('Connected')
+        } catch {
+          // File doesn't exist yet, that's fine
+          setCurrentSha(null)
+          setReadOnly(false)
+          setStatus('Ready to create')
+        }
+      } else if (targetFile) {
+        // No dirty edits, load fresh
+        await loadFileWithApi(targetFile)
+        setStatus('')
+      } else {
+        setStatus(`${fileList.length} files`)
+      }
+    } catch (e) {
+      setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    }
+  }, [token, fileParam, currentFile, dirty, loadFileWithApi, captureMode, initCaptureMode])
 
   // Auto-load file from URL param immediately (read-only)
   useEffect(() => {
