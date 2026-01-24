@@ -741,6 +741,157 @@ li:last-child {
 }
 
 /* ========================================
+   Log pages - Temporal navigation
+   ======================================== */
+.log-page .log-header {
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.log-page .log-period {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  margin-bottom: var(--space-1);
+}
+
+.log-page h1 {
+  margin-bottom: var(--space-2);
+}
+
+.log-page .log-nav {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.log-page .log-nav a {
+  color: var(--fg-muted);
+}
+
+.log-page .log-nav a:hover {
+  color: var(--accent);
+}
+
+.log-page .log-nav-sep {
+  margin: 0 var(--space-2);
+  color: var(--border);
+}
+
+.log-page .log-section {
+  margin-bottom: var(--space-5);
+}
+
+.log-page .log-section h2 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  margin-bottom: var(--space-3);
+}
+
+.log-page .log-children,
+.log-page .log-notes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.log-page .log-children li,
+.log-page .log-notes li {
+  margin-bottom: var(--space-2);
+  font-size: 0.9375rem;
+}
+
+.log-page .log-children a,
+.log-page .log-notes a {
+  font-weight: 500;
+}
+
+.log-page .log-count {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-left: var(--space-2);
+}
+
+.log-page .log-description {
+  color: var(--fg-secondary);
+  font-size: 1rem;
+  margin-bottom: var(--space-4);
+}
+
+/* Log index page */
+.log-index .log-years {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.log-index .log-years li {
+  margin-bottom: var(--space-2);
+  font-size: 1.125rem;
+}
+
+.log-index .log-years a {
+  font-weight: 600;
+}
+
+.log-index .log-count {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  font-weight: 400;
+  margin-left: var(--space-2);
+}
+
+/* Site header navigation for log pages */
+.site-nav-sep {
+  color: var(--fg-muted);
+  margin: 0 var(--space-1);
+}
+
+.site-nav-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.site-nav-link:hover {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* Footer separator */
+.footer-sep {
+  color: var(--fg-muted);
+  margin: 0 var(--space-2);
+}
+
+/* Panel actions layout */
+.panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.panel-btn-secondary {
+  background: transparent;
+  color: var(--fg-muted);
+}
+
+.panel-btn-secondary:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+/* ========================================
    Mobile responsive - Article pages
    ======================================== */
 @media (max-width: 640px) {

@@ -21,6 +21,42 @@ interface EditorBackup {
   timestamp: number
 }
 
+// Get today's date in YYYY-MM-DD format
+function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+// Get the log file path for today
+function getTodayLogPath(): string {
+  return `docs/log/${getTodayDate()}.md`
+}
+
+// Get week number for a date
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+// Generate log template for a new day
+function generateLogTemplate(date: string): string {
+  const d = new Date(date + 'T00:00:00Z')
+  const year = d.getUTCFullYear()
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0')
+  const week = getWeekNumber(d).toString().padStart(2, '0')
+
+  return `---
+title: ${date}
+created: ${date}
+---
+
+[[log/${year}|${year}]] / [[log/${year}-${month}|${month}]] / [[log/${year}-w${week}|W${week}]]
+
+`
+}
+
 function saveBackup(path: string | null, content: string): void {
   const backup: EditorBackup = { path, content, timestamp: Date.now() }
   localStorage.setItem(BACKUP_KEY, JSON.stringify(backup))
@@ -58,13 +94,17 @@ export function Editor() {
   const [readOnly, setReadOnly] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [captureMode, setCaptureMode] = useState(false)
+  const [captureContent, setCaptureContent] = useState<string | null>(null)
 
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const savedContentRef = useRef<string>('')
   const currentFileRef = useRef<string | null>(null)
 
-  const fileParam = new URLSearchParams(window.location.search).get('file')
+  const params = new URLSearchParams(window.location.search)
+  const fileParam = params.get('file')
+  const captureParam = params.get('capture')
 
   // Keep currentFileRef in sync
   useEffect(() => {
@@ -193,6 +233,12 @@ export function Editor() {
       setConnected(true)
       storeToken(token)
 
+      // Handle capture mode after connecting
+      if (captureMode) {
+        await initCaptureMode()
+        return
+      }
+
       const targetFile = currentFile || fileParam
       if (targetFile && dirty) {
         // Preserve dirty edits - just get SHA for saving
@@ -217,10 +263,76 @@ export function Editor() {
     } catch (e) {
       setStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
-  }, [token, fileParam, currentFile, dirty, loadFileWithApi])
+  }, [token, fileParam, currentFile, dirty, loadFileWithApi, captureMode, initCaptureMode])
+
+  // Handle capture mode - load today's log and prepare to append
+  const initCaptureMode = useCallback(async () => {
+    if (!token) {
+      setPanelOpen(true)
+      setStatus('Connect to capture')
+      return
+    }
+
+    const logPath = getTodayLogPath()
+    const today = getTodayDate()
+    setCaptureMode(true)
+    setStatus('Loading log...')
+
+    try {
+      // Try to load existing log file
+      const { content, sha } = await getFile(token, logPath)
+      savedContentRef.current = content
+
+      // Append capture content
+      const capturedText = captureContent || ''
+      const newContent = content.trimEnd() + '\n\n' + capturedText
+
+      viewRef.current?.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: newContent },
+      })
+      setCurrentFile(logPath)
+      setCurrentSha(sha)
+      setDirty(true)
+      setReadOnly(false)
+      setStatus('Append to log')
+    } catch (e) {
+      // File doesn't exist - create new log
+      const template = generateLogTemplate(today)
+      const capturedText = captureContent || ''
+      const newContent = template + capturedText
+
+      savedContentRef.current = ''
+      viewRef.current?.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: newContent },
+      })
+      setCurrentFile(logPath)
+      setCurrentSha(null)
+      setDirty(true)
+      setReadOnly(false)
+      setStatus('New log')
+    }
+
+    // Clear URL params after processing
+    window.history.replaceState(null, '', '/edit.html')
+  }, [token, captureContent])
 
   // Auto-load file from URL param immediately (read-only)
   useEffect(() => {
+    // Handle capture mode
+    if (captureParam) {
+      const content = captureParam === 'today' ? '' : decodeURIComponent(captureParam)
+      setCaptureContent(content)
+      setCaptureMode(true)
+
+      if (token) {
+        initCaptureMode()
+      } else {
+        setPanelOpen(true)
+        setStatus('Connect to capture')
+      }
+      return
+    }
+
     if (fileParam && !currentFile) {
       // If we have a stored token, try to connect and load with API
       if (token) {
@@ -413,9 +525,19 @@ created: ${new Date().toISOString().split('T')[0]}
                 </select>
               </div>
 
-              <div className="panel-section">
+              <div className="panel-section panel-actions">
                 <button className="panel-btn-full" onClick={handleNewFile}>
                   New Note
+                </button>
+                <button
+                  className="panel-btn-full panel-btn-secondary"
+                  onClick={() => {
+                    setCaptureMode(true)
+                    setCaptureContent('')
+                    initCaptureMode()
+                  }}
+                >
+                  Today's Log
                 </button>
               </div>
             </>
