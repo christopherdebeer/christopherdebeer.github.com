@@ -412,6 +412,21 @@ function readTranscludeSource(sourcePath: string, currentDir: string): Transclud
   return { content, isSlug: target.isSlug, fileExt }
 }
 
+// Generate source link for transcluded content
+function getTranscludeSourceLink(source: string, result: TranscludeResult): string {
+  // Extract the original slug/path from the source (handles [[slug]] and [[slug#section]])
+  const slugMatch = source.match(/\[\[([^\]#]+)(?:#([^\]]+))?\]\]/) ||
+                    source.match(/<a href="\/([^"#]+)\.html(?:#([^"]*))?"[^>]*>/)
+  if (slugMatch && result.isSlug) {
+    const slug = slugMatch[1]
+    const section = slugMatch[2]
+    const displayText = section ? `${slug}#${section}` : slug
+    const href = section ? `/${slug}.html#${section}` : `/${slug}.html`
+    return `<a href="${href}" class="transclude-source">${displayText}</a>`
+  }
+  return `<span class="transclude-source">${source}</span>`
+}
+
 // Custom renderer for code blocks with viewer support (marked v15 signature)
 const renderer = {
   code({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
@@ -426,10 +441,12 @@ const renderer = {
     // Handle transclusion - read content from external file
     let content = text
     let transcludeResult: TranscludeResult | null = null
+    let sourceLink = ''
     if (meta.source) {
       transcludeResult = readTranscludeSource(meta.source, currentFileDir)
       if (transcludeResult !== null) {
         content = transcludeResult.content
+        sourceLink = getTranscludeSourceLink(meta.source, transcludeResult)
 
         // Auto-detect language from transcluded file if not specified
         if (!meta.lang && transcludeResult.fileExt) {
@@ -453,21 +470,25 @@ const renderer = {
     if (meta.isOutput) classes.push('output')
     if (meta.source) classes.push('transcluded')
 
+    // Source header for transclusions
+    const sourceHeader = sourceLink ? `<div class="transclude-header">↳ from ${sourceLink}</div>` : ''
+
     // Handle build-time viewers
     if (viewer && BUILD_VIEWERS[viewer]) {
       const viewerHtml = BUILD_VIEWERS[viewer](content, meta)
-      return `<div class="${classes.join(' ')} viewer-${viewer}">${viewerHtml}</div>`
+      return `<div class="${classes.join(' ')} viewer-${viewer}">${sourceHeader}${viewerHtml}</div>`
     }
 
     // Handle client-side viewers (mermaid, etc)
     if (viewer && CLIENT_VIEWERS.includes(viewer)) {
       const escaped = escapeHtml(content)
-      return `<div class="${classes.join(' ')} viewer-${viewer}" data-viewer="${viewer}"><pre class="viewer-source" style="display:none">${escaped}</pre><div class="viewer-target"></div></div>`
+      return `<div class="${classes.join(' ')} viewer-${viewer}" data-viewer="${viewer}">${sourceHeader}<pre class="viewer-source" style="display:none">${escaped}</pre><div class="viewer-target"></div></div>`
     }
 
-    // Default code rendering with syntax highlighting class
+    // Default code rendering - use CodeMirror-compatible structure
     const langClass = meta.lang ? ` language-${meta.lang}` : ''
-    return `<pre class="${classes.join(' ')}"><code class="hljs${langClass}">${escapeHtml(content)}</code></pre>`
+    const dataLang = meta.lang ? ` data-lang="${meta.lang}"` : ''
+    return `<div class="${classes.join(' ')} cm-code"${dataLang}>${sourceHeader}<pre><code class="hljs${langClass}">${escapeHtml(content)}</code></pre></div>`
   }
 }
 
@@ -577,8 +598,25 @@ function extractLinks(content: string): LinkInfo[] {
 }
 
 // Convert [[wiki-links]] to HTML links (supports virtual slugs and sections)
+// Skips wikilinks inside backticks (inline code) and code fences
 function convertLinks(content: string, allSlugs: Set<string>): string {
-  return content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
+  // Protect code blocks and inline code from wikilink conversion
+  const codeSegments: string[] = []
+
+  // Replace code fences with placeholders
+  let result = content.replace(/```[\s\S]*?```/g, (match) => {
+    codeSegments.push(match)
+    return `\x00CODE${codeSegments.length - 1}\x00`
+  })
+
+  // Replace inline code with placeholders
+  result = result.replace(/`[^`]+`/g, (match) => {
+    codeSegments.push(match)
+    return `\x00CODE${codeSegments.length - 1}\x00`
+  })
+
+  // Now convert wikilinks in unprotected content
+  result = result.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
     const parts = link.split('|')
     let slug = parts[0].trim()
     const text = (parts[1] || parts[0]).trim()
@@ -597,6 +635,11 @@ function convertLinks(content: string, allSlugs: Set<string>): string {
     const cls = exists ? '' : ' class="broken"'
     return `<a href="/${slug}.html${section}"${cls}>${text}</a>`
   })
+
+  // Restore protected content
+  result = result.replace(/\x00CODE(\d+)\x00/g, (_, idx) => codeSegments[parseInt(idx, 10)])
+
+  return result
 }
 
 // Build slug collision map (for disambiguation)

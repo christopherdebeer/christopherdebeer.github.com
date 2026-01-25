@@ -972,6 +972,62 @@ li:last-child {
   border-left: 3px solid var(--border-bold);
 }
 
+/* Transclude source header */
+.transclude-header {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.transclude-header a.transclude-source {
+  color: var(--fg-secondary);
+  text-decoration: none;
+}
+
+.transclude-header a.transclude-source:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* CodeMirror-based code blocks */
+.cm-code {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.cm-code pre {
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+.cm-code .cm-editor {
+  font-size: 0.875rem;
+}
+
+.cm-code .cm-editor .cm-scroller {
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+.cm-code .cm-editor .cm-gutters {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+
+.cm-code .cm-editor .cm-content {
+  padding: var(--space-2) 0;
+}
+
+.cm-code .cm-editor .cm-line {
+  padding: 0 var(--space-3);
+}
+
 /* CSV Table viewer */
 .viewer-csv {
   overflow-x: auto;
