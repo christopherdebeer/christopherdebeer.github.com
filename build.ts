@@ -15,6 +15,8 @@ const OUT = './dist'
 // Global state for build context (needed by renderer)
 let currentFileDir = SRC
 let currentAllSlugs: Set<string> = new Set()
+let currentPages: Map<string, PageData> = new Map()
+let currentMissingSlugs: Set<string> = new Set()
 
 // ============================================================================
 // Virtual page resolution
@@ -22,6 +24,56 @@ let currentAllSlugs: Set<string> = new Set()
 
 // Virtual slugs that map to generated pages
 const VIRTUAL_PAGES = ['recent', 'random', 'missing']
+
+// Generate markdown content for virtual pages (used by transclusion)
+function generateVirtualPageContent(slug: string): string | null {
+  switch (slug.toLowerCase()) {
+    case 'recent': {
+      const sortedByDate = Array.from(currentPages.values())
+        .filter(p => p.meta.created || p.meta.updated)
+        .sort((a, b) => {
+          const dateA = a.meta.updated || a.meta.created || ''
+          const dateB = b.meta.updated || b.meta.created || ''
+          return dateB.localeCompare(dateA)
+        })
+        .slice(0, 10)
+
+      if (sortedByDate.length === 0) return '*No recent notes.*'
+
+      return sortedByDate.map(p => {
+        const date = p.meta.updated || p.meta.created
+        const isUpdated = p.meta.updated && p.meta.updated !== p.meta.created
+        return `- [[${p.slug}|${p.meta.title || p.slug}]] — ${date}${isUpdated ? ' (updated)' : ''}`
+      }).join('\n')
+    }
+
+    case 'random': {
+      const allPagesList = Array.from(currentPages.values()).filter(p => !p.slug.startsWith('log/'))
+      if (allPagesList.length === 0) return '*No notes yet.*'
+
+      const shuffled = [...allPagesList].sort(() => Math.random() - 0.5)
+      const randomPages = shuffled.slice(0, 5)
+
+      return randomPages.map(p => {
+        const status = p.meta.status || 'seedling'
+        return `- [[${p.slug}|${p.meta.title || p.slug}]] — ${status}`
+      }).join('\n')
+    }
+
+    case 'missing': {
+      const missingList = Array.from(currentMissingSlugs)
+        .filter(s => !s.startsWith('log/'))
+        .sort()
+
+      if (missingList.length === 0) return '*No missing notes. All links resolve!*'
+
+      return missingList.map(slug => `- [[${slug}]]`).join('\n')
+    }
+
+    default:
+      return null
+  }
+}
 
 function resolveVirtualSlug(slug: string): string {
   const now = new Date()
@@ -361,6 +413,18 @@ function readTranscludeSource(sourcePath: string, currentDir: string): Transclud
   let fileExt: string | undefined
 
   if (target.isSlug) {
+    // Check if this is a virtual page first
+    if (VIRTUAL_PAGES.includes(target.path.toLowerCase())) {
+      const virtualContent = generateVirtualPageContent(target.path)
+      if (virtualContent !== null) {
+        // Virtual pages don't support section extraction
+        if (target.section) {
+          return { content: `[Virtual pages don't support section transclusion]`, isSlug: true, fileExt: 'md' }
+        }
+        return { content: virtualContent, isSlug: true, fileExt: 'md' }
+      }
+    }
+
     // Resolve slug to docs/{slug}.md
     fullPath = join(SRC, `${target.path}.md`)
     fileExt = 'md'
@@ -597,6 +661,29 @@ function extractLinks(content: string): LinkInfo[] {
   return links
 }
 
+// Extract transclusion sources from code fences (```lang < [[slug]]```)
+// These count as links for backlink purposes
+function extractTransclusionLinks(content: string): LinkInfo[] {
+  const links: LinkInfo[] = []
+
+  // Match code fence with transclusion: ```lang < [[slug]] or ```lang < [[slug#section]]
+  // The pattern matches: ``` followed by optional lang/meta, then < [[slug]]
+  const codeFencePattern = /```[^\n]*<\s*\[\[([^\]#]+)(?:#[^\]]+)?\]\]/g
+  let match
+
+  while ((match = codeFencePattern.exec(content)) !== null) {
+    let slug = match[1].trim()
+
+    // Resolve virtual slugs
+    slug = resolveVirtualSlug(slug)
+
+    // Use "transcluded" as a marker for the link text to indicate this is a transclusion
+    links.push({ slug, linkText: '(transcluded)' })
+  }
+
+  return links
+}
+
 // Anchor mapping: target slug -> anchor ID
 type AnchorMap = Map<string, string>
 
@@ -692,12 +779,15 @@ function build(): void {
     allSlugs.add(slug)
     const raw = readFileSync(file, 'utf8')
     const { meta, body } = parseFrontmatter(raw)
-    const links = extractLinks(body)
+    // Extract both regular wikilinks and transclusion sources
+    // Transclusion links first so they're preserved during deduplication (with their '(transcluded)' marker)
+    const links = [...extractTransclusionLinks(body), ...extractLinks(body)]
     pages.set(slug, { slug, meta, body, links, file })
   }
 
-  // Set global slug reference for viewers
+  // Set global state for viewers and transclusion
   currentAllSlugs = allSlugs
+  currentPages = pages
 
   // Backlink entry: source page slug + the link text used (if any) + anchor ID
   interface BacklinkEntry {
@@ -730,14 +820,20 @@ function build(): void {
   }
 
   // Find missing slugs (linked but no file exists)
+  // Excludes virtual pages and log pages which are generated dynamically
   const missingSlugs = new Set<string>()
   for (const page of pages.values()) {
     for (const link of page.links) {
-      if (!allSlugs.has(link.slug)) {
+      if (!allSlugs.has(link.slug) &&
+          !VIRTUAL_PAGES.includes(link.slug) &&
+          !link.slug.startsWith('log/')) {
         missingSlugs.add(link.slug)
       }
     }
   }
+
+  // Set global state for virtual page transclusion
+  currentMissingSlugs = missingSlugs
 
   // Detect slug collisions for disambiguation
   const collisions = buildSlugCollisions(allSlugs)
@@ -1000,6 +1096,25 @@ function build(): void {
   // Generate virtual pages (recent, random, missing)
   // ============================================================================
 
+  // Helper to render backlinks section HTML for virtual pages
+  function renderBacklinksHtml(bl: BacklinkEntry[]): string {
+    if (bl.length === 0) return ''
+    const items = bl.map(entry => {
+      const title = pages.get(entry.sourceSlug)?.meta.title || entry.sourceSlug.split('/').pop() || entry.sourceSlug
+      const linkTextHtml = entry.linkText
+        ? ` — <a href="/${entry.sourceSlug}.html${entry.anchorId ? `#${entry.anchorId}` : ''}" class="link-text">"${escapeHtml(entry.linkText)}"</a>`
+        : ` <span class="slug-hint">(${entry.sourceSlug})</span>`
+      return `<li><a href="/${entry.sourceSlug}.html">${escapeHtml(title)}</a>${linkTextHtml}</li>`
+    }).join('\n        ')
+    return `
+    <section class="backlinks">
+      <h2>Linked from</h2>
+      <ul>
+        ${items}
+      </ul>
+    </section>`
+  }
+
   // Sort pages by date for recent
   const sortedByDate = Array.from(pages.values())
     .filter(p => p.meta.created || p.meta.updated)
@@ -1010,6 +1125,7 @@ function build(): void {
     })
     .slice(0, 10)
 
+  const recentBacklinks = backlinks.get('recent') || []
   const recentHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1036,7 +1152,7 @@ function build(): void {
           </li>`
         }).join('\n        ')}
       </ul>
-    </article>
+    </article>${renderBacklinksHtml(recentBacklinks)}
   </main>
   <footer class="site-footer">
     <a href="/random.html">Random</a>
@@ -1052,6 +1168,7 @@ function build(): void {
   const shuffled = [...allPagesList].sort(() => Math.random() - 0.5)
   const randomPages = shuffled.slice(0, 5)
 
+  const randomBacklinks = backlinks.get('random') || []
   const randomHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1077,7 +1194,7 @@ function build(): void {
           </li>`
         }).join('\n        ')}
       </ul>
-    </article>
+    </article>${renderBacklinksHtml(randomBacklinks)}
   </main>
   <footer class="site-footer">
     <a href="/random.html">Shuffle</a>
@@ -1097,6 +1214,7 @@ function build(): void {
       return { slug, backlinks: bl }
     })
 
+  const missingBacklinks = backlinks.get('missing') || []
   const missingHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1127,7 +1245,7 @@ function build(): void {
         }).join('\n        ')}
       </ul>
       ` : '<p class="stub-notice">No missing notes. All links resolve!</p>'}
-    </article>
+    </article>${renderBacklinksHtml(missingBacklinks)}
   </main>
   <footer class="site-footer">
     <a href="/edit.html">Create New</a>
