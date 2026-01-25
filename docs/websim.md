@@ -18,16 +18,4 @@ Profile: [websim.ai/@c15r](https://websim.ai/@c15r)
 - **[Components Playground](https://websim.com/@c15r/components)** - Reusable component library
 - **[User Activity Display](https://websim-ai-user-activity-display--c15r.on.websim.com/)** - Tool for viewing likes, history, and running SQL queries
 
-## See Also
-
-[[val-town]] is a similar rapid-prototyping platform focused on backend code—JavaScript/TypeScript functions that run on the server. Where WebSim excels at frontend interfaces, Val Town handles APIs, webhooks, and scheduled jobs.
-
-My Val Town profile: [val.town/u/c15r](https://val.town/u/c15r)
-
-Notable vals:
-- **ParclandWebRtcServer** - WebRTC signaling server backend for [[parc-land]]
-- **magicword** - Magic word link shortener
-- **GHauth** - GitHub authentication helper
-- **MCP** - Model Context Protocol experiments
-
-See also: [[parc-land]]
+See also: [[val-town]], [[parc-land]]
