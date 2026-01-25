@@ -856,12 +856,18 @@ function build(): void {
     const title = page.meta.title || slug.split('/').pop() || slug
     const bl = backlinks.get(slug) || []
 
+    // Convert status field wikilinks (e.g., "[[seedling]]" -> link)
+    const statusHtml = page.meta.status
+      ? convertLinksInContent(page.meta.status, allSlugs)
+      : undefined
+
     const element = React.createElement(Page, {
       title,
       content: html,
       meta: page.meta,
       slug,
       backlinks: toBacklinkItems(bl),
+      statusHtml,
     })
 
     const out = '<!DOCTYPE html>\n' + renderToStaticMarkup(element)
@@ -1184,20 +1190,20 @@ function build(): void {
   <main class="page virtual-page">
     <article>
       <h1>Random Notes</h1>
-      <p class="virtual-description">A random selection of notes. <a href="/random.html">Refresh for more.</a></p>
+      <p class="virtual-description">A random selection of notes from the garden.</p>
       <ul class="virtual-list">
         ${randomPages.map(p => {
           const status = p.meta.status || 'seedling'
           return `<li>
             <a href="/${p.slug}.html">${p.meta.title || p.slug}</a>
-            <span class="virtual-meta">${status}</span>
+            <span class="virtual-meta">${escapeHtml(status)}</span>
           </li>`
         }).join('\n        ')}
       </ul>
     </article>${renderBacklinksHtml(randomBacklinks)}
   </main>
   <footer class="site-footer">
-    <a href="/random.html">Shuffle</a>
+    <a href="/">Home</a>
   </footer>
 </body>
 </html>`

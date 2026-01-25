@@ -1,6 +1,6 @@
 export interface PageMeta {
   title?: string
-  status?: 'seedling' | 'budding' | 'evergreen'
+  status?: string  // Arbitrary text, may contain [[wikilinks]]
   created?: string
   updated?: string
 }

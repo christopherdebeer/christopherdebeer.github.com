@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { EditorView, basicSetup, ViewUpdate } from 'codemirror'
+import { keymap } from '@codemirror/view'
 import { markdown } from '@codemirror/lang-markdown'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Compartment } from '@codemirror/state'
+import { autocompletion, CompletionContext, CompletionResult, acceptCompletion } from '@codemirror/autocomplete'
 import {
   listFiles,
   getFile,
@@ -12,6 +14,70 @@ import {
   storeToken,
   type GitHubFile,
 } from './github'
+
+// Compartment for dynamically updating completions when file list changes
+const completionCompartment = new Compartment()
+
+// Create wikilink autocomplete source
+function createWikilinkCompletions(files: GitHubFile[]) {
+  // Extract slugs from file paths (docs/slug.md -> slug)
+  const slugs = files
+    .map(f => f.path.replace(/^docs\//, '').replace(/\.md$/, ''))
+    .sort()
+
+  return (context: CompletionContext): CompletionResult | null => {
+    // Find if we're inside a wikilink: [[...
+    const line = context.state.doc.lineAt(context.pos)
+    const lineText = line.text
+    const cursorInLine = context.pos - line.from
+
+    // Look backwards for [[ that isn't closed
+    let start = -1
+    for (let i = cursorInLine - 1; i >= 1; i--) {
+      if (lineText[i] === '[' && lineText[i - 1] === '[') {
+        // Check if there's a ]] before cursor
+        const afterOpen = lineText.slice(i + 1, cursorInLine)
+        if (!afterOpen.includes(']]')) {
+          start = i + 1
+          break
+        }
+      }
+      // Stop if we hit ]]
+      if (lineText[i] === ']' && lineText[i - 1] === ']') break
+    }
+
+    if (start === -1) return null
+
+    // Get the text typed so far
+    const typed = lineText.slice(start, cursorInLine).toLowerCase()
+
+    // Filter and sort slugs by match quality
+    const matches = slugs
+      .filter(slug => slug.toLowerCase().includes(typed))
+      .sort((a, b) => {
+        const aLower = a.toLowerCase()
+        const bLower = b.toLowerCase()
+        // Prioritize prefix matches
+        const aPrefix = aLower.startsWith(typed)
+        const bPrefix = bLower.startsWith(typed)
+        if (aPrefix && !bPrefix) return -1
+        if (!aPrefix && bPrefix) return 1
+        return a.localeCompare(b)
+      })
+      .slice(0, 20)
+
+    if (matches.length === 0) return null
+
+    return {
+      from: line.from + start,
+      options: matches.map(slug => ({
+        label: slug,
+        type: 'text',
+        apply: slug,
+      })),
+    }
+  }
+}
 
 const BACKUP_KEY = 'editor-backup'
 
@@ -126,9 +192,23 @@ export function Editor() {
       }
     })
 
+    // Wikilink autocomplete with Tab to accept
+    const wikilinkAutocomplete = autocompletion({
+      override: [createWikilinkCompletions([])],
+      activateOnTyping: true,
+    })
+
     const state = EditorState.create({
       doc: '',
-      extensions: [basicSetup, markdown(), EditorView.lineWrapping, updateListener],
+      extensions: [
+        basicSetup,
+        markdown(),
+        EditorView.lineWrapping,
+        updateListener,
+        completionCompartment.of(wikilinkAutocomplete),
+        // Tab accepts completion when menu is open
+        keymap.of([{ key: 'Tab', run: acceptCompletion }]),
+      ],
     })
 
     viewRef.current = new EditorView({
@@ -154,6 +234,20 @@ export function Editor() {
       viewRef.current = null
     }
   }, [])
+
+  // Update autocomplete when files list changes
+  useEffect(() => {
+    if (!viewRef.current || files.length === 0) return
+
+    const wikilinkAutocomplete = autocompletion({
+      override: [createWikilinkCompletions(files)],
+      activateOnTyping: true,
+    })
+
+    viewRef.current.dispatch({
+      effects: completionCompartment.reconfigure(wikilinkAutocomplete),
+    })
+  }, [files])
 
   // Load file from raw endpoint (no auth required)
   const loadFileRaw = useCallback(async (path: string) => {

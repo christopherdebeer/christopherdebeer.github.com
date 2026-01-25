@@ -126,6 +126,20 @@ a.broken:hover {
   text-decoration-style: dashed;
 }
 
+/* External links - show indicator */
+a[href^="http"]:not(.site-name):not(.toolbar-btn)::after {
+  content: '↗';
+  display: inline-block;
+  margin-left: 0.15em;
+  font-size: 0.75em;
+  opacity: 0.6;
+  text-decoration: none;
+}
+
+a[href^="http"]:not(.site-name):not(.toolbar-btn):hover::after {
+  opacity: 1;
+}
+
 /* Content elements */
 blockquote {
   margin: var(--space-4) 0;
@@ -227,29 +241,21 @@ li:last-child {
   letter-spacing: -0.03em;
 }
 
-/* Status indicator - refined inline badge */
-.status-indicator {
-  display: inline-block;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: var(--space-1) var(--space-2);
-  margin-right: var(--space-2);
-  vertical-align: middle;
-  border: 1px solid currentColor;
+/* Status in meta section - can contain arbitrary text or wikilinks */
+.meta-status {
+  color: var(--fg-secondary);
 }
 
-.status-indicator.seedling {
-  color: var(--status-seedling);
+.meta-status a {
+  color: var(--fg-secondary);
 }
 
-.status-indicator.budding {
-  color: var(--status-budding);
+.meta-status a:hover {
+  color: var(--accent);
 }
 
-.status-indicator.evergreen {
-  color: var(--status-evergreen);
+.meta-status a.broken {
+  color: var(--broken);
 }
 
 /* Meta info */
@@ -968,7 +974,16 @@ li:last-child {
   border-left: 3px solid var(--accent);
 }
 
+/* Transcluded blocks - border on content only, not footer */
 .code-block.transcluded {
+  border-left: none;
+}
+
+.code-block.transcluded > .md-viewer,
+.code-block.transcluded > .html-viewer,
+.code-block.transcluded > .svg-viewer,
+.code-block.transcluded > pre,
+.code-block.transcluded > .cm-editor-wrapper {
   border-left: 3px solid var(--border-bold);
 }
 
@@ -976,9 +991,8 @@ li:last-child {
 .transclude-footer {
   font-size: 0.75rem;
   color: var(--fg-muted);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  padding: var(--space-2) 0;
+  margin-top: var(--space-2);
 }
 
 .transclude-footer a.transclude-source {

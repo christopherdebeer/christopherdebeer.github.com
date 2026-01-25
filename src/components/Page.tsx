@@ -1,6 +1,6 @@
 import React from 'react'
 import { Backlinks } from './Backlinks.js'
-import { BacklinkItem, PageMeta, STATUS_LABELS, Status } from './types.js'
+import { BacklinkItem, PageMeta } from './types.js'
 
 interface PageProps {
   title: string
@@ -8,11 +8,10 @@ interface PageProps {
   meta: PageMeta
   slug: string
   backlinks: BacklinkItem[]
+  statusHtml?: string  // Pre-rendered status with wikilinks converted
 }
 
-export function Page({ title, content, meta, slug, backlinks }: PageProps) {
-  const status = (meta.status || 'seedling') as Status
-  const statusLabel = STATUS_LABELS[status]
+export function Page({ title, content, meta, slug, backlinks, statusHtml }: PageProps) {
   const srcPath = `docs/${slug}.md`
 
   // Don't link log pages to themselves
@@ -32,13 +31,14 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
         </header>
         <main className="page">
           <article>
-            <h1>
-              <span className={`status-indicator ${status}`}>{statusLabel}</span>
-              {title}
-            </h1>
+            <h1>{title}</h1>
             <div className="meta">
+              {statusHtml && (
+                <span className="meta-status" dangerouslySetInnerHTML={{ __html: statusHtml }} />
+              )}
               {meta.created && (
                 <span className="meta-date">
+                  {statusHtml && ' · '}
                   {isLogPage ? (
                     meta.created
                   ) : (
