@@ -12,10 +12,12 @@ Start anywhere. Follow links. Get lost. That's the point.
 
 ---
 
-**Currently growing:**
-
-- [[knowledge-work-should-accrete]]
-- [[writing-for-yourself-reduces-friction]]
-- [[links-signal-intent-before-content-exists]]
-- [[atomicity-forces-clarity]]
 - [[project|projects]]
+
+
+```md < [[random]]
+```
+
+```md < [[missing]]
+```
+
