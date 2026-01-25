@@ -470,25 +470,25 @@ const renderer = {
     if (meta.isOutput) classes.push('output')
     if (meta.source) classes.push('transcluded')
 
-    // Source header for transclusions
-    const sourceHeader = sourceLink ? `<div class="transclude-header">↳ from ${sourceLink}</div>` : ''
+    // Source footer for transclusions
+    const sourceFooter = sourceLink ? `<div class="transclude-footer">↳ from ${sourceLink}</div>` : ''
 
     // Handle build-time viewers
     if (viewer && BUILD_VIEWERS[viewer]) {
       const viewerHtml = BUILD_VIEWERS[viewer](content, meta)
-      return `<div class="${classes.join(' ')} viewer-${viewer}">${sourceHeader}${viewerHtml}</div>`
+      return `<div class="${classes.join(' ')} viewer-${viewer}">${viewerHtml}${sourceFooter}</div>`
     }
 
     // Handle client-side viewers (mermaid, etc)
     if (viewer && CLIENT_VIEWERS.includes(viewer)) {
       const escaped = escapeHtml(content)
-      return `<div class="${classes.join(' ')} viewer-${viewer}" data-viewer="${viewer}">${sourceHeader}<pre class="viewer-source" style="display:none">${escaped}</pre><div class="viewer-target"></div></div>`
+      return `<div class="${classes.join(' ')} viewer-${viewer}" data-viewer="${viewer}"><pre class="viewer-source" style="display:none">${escaped}</pre><div class="viewer-target"></div>${sourceFooter}</div>`
     }
 
     // Default code rendering - use CodeMirror-compatible structure
     const langClass = meta.lang ? ` language-${meta.lang}` : ''
     const dataLang = meta.lang ? ` data-lang="${meta.lang}"` : ''
-    return `<div class="${classes.join(' ')} cm-code"${dataLang}>${sourceHeader}<pre><code class="hljs${langClass}">${escapeHtml(content)}</code></pre></div>`
+    return `<div class="${classes.join(' ')} cm-code"${dataLang}><pre><code class="hljs${langClass}">${escapeHtml(content)}</code></pre>${sourceFooter}</div>`
   }
 }
 
