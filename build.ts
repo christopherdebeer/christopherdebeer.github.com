@@ -20,6 +20,9 @@ let currentAllSlugs: Set<string> = new Set()
 // Virtual page resolution
 // ============================================================================
 
+// Virtual slugs that map to generated pages
+const VIRTUAL_PAGES = ['recent', 'random', 'missing']
+
 function resolveVirtualSlug(slug: string): string {
   const now = new Date()
   const yyyy = now.getFullYear()
@@ -45,6 +48,11 @@ function resolveVirtualSlug(slug: string): string {
       return `log/${yyyy}-${mm}`
     case 'this-year':
       return `log/${yyyy}`
+    // These resolve to themselves (generated pages)
+    case 'recent':
+    case 'random':
+    case 'missing':
+      return slug.toLowerCase()
     default:
       return slug
   }
@@ -76,7 +84,7 @@ function convertLinksInContent(content: string, allSlugs: Set<string>): string {
 
     // Resolve virtual slugs
     slug = resolveVirtualSlug(slug)
-    const exists = allSlugs.has(slug) || slug.startsWith('log/')
+    const exists = allSlugs.has(slug) || slug.startsWith('log/') || VIRTUAL_PAGES.includes(slug)
     const cls = exists ? '' : ' class="broken"'
     return `<a href="/${slug}.html${section}"${cls}>${text}</a>`
   })
@@ -585,7 +593,7 @@ function convertLinks(content: string, allSlugs: Set<string>): string {
 
     // Resolve virtual slugs like [[today]], [[this-week]]
     slug = resolveVirtualSlug(slug)
-    const exists = allSlugs.has(slug) || slug.startsWith('log/')
+    const exists = allSlugs.has(slug) || slug.startsWith('log/') || VIRTUAL_PAGES.includes(slug)
     const cls = exists ? '' : ' class="broken"'
     return `<a href="/${slug}.html${section}"${cls}>${text}</a>`
   })
@@ -914,7 +922,149 @@ function build(): void {
   writeFileSync(join(OUT, 'log.html'), logIndexHtml)
   console.log('  log (index)')
 
-  console.log(`\nBuilt ${pages.size} pages, ${stubCount} stubs, ${logCount} log pages`)
+  // ============================================================================
+  // Generate virtual pages (recent, random, missing)
+  // ============================================================================
+
+  // Sort pages by date for recent
+  const sortedByDate = Array.from(pages.values())
+    .filter(p => p.meta.created || p.meta.updated)
+    .sort((a, b) => {
+      const dateA = a.meta.updated || a.meta.created || ''
+      const dateB = b.meta.updated || b.meta.created || ''
+      return dateB.localeCompare(dateA)
+    })
+    .slice(0, 10)
+
+  const recentHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recent — Garden</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="site-name">Garden</a>
+  </header>
+  <main class="page virtual-page">
+    <article>
+      <h1>Recent Notes</h1>
+      <p class="virtual-description">Most recently created or updated notes.</p>
+      <ul class="virtual-list">
+        ${sortedByDate.map(p => {
+          const date = p.meta.updated || p.meta.created
+          const isUpdated = p.meta.updated && p.meta.updated !== p.meta.created
+          return `<li>
+            <a href="/${p.slug}.html">${p.meta.title || p.slug}</a>
+            <span class="virtual-meta">${date}${isUpdated ? ' (updated)' : ''}</span>
+          </li>`
+        }).join('\n        ')}
+      </ul>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <a href="/random.html">Random</a>
+  </footer>
+</body>
+</html>`
+
+  writeFileSync(join(OUT, 'recent.html'), recentHtml)
+  console.log('  recent (virtual)')
+
+  // Random page - select 5 random notes
+  const allPagesList = Array.from(pages.values()).filter(p => !p.slug.startsWith('log/'))
+  const shuffled = [...allPagesList].sort(() => Math.random() - 0.5)
+  const randomPages = shuffled.slice(0, 5)
+
+  const randomHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random — Garden</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="site-name">Garden</a>
+  </header>
+  <main class="page virtual-page">
+    <article>
+      <h1>Random Notes</h1>
+      <p class="virtual-description">A random selection of notes. <a href="/random.html">Refresh for more.</a></p>
+      <ul class="virtual-list">
+        ${randomPages.map(p => {
+          const status = p.meta.status || 'seedling'
+          return `<li>
+            <a href="/${p.slug}.html">${p.meta.title || p.slug}</a>
+            <span class="virtual-meta">${status}</span>
+          </li>`
+        }).join('\n        ')}
+      </ul>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <a href="/random.html">Shuffle</a>
+  </footer>
+</body>
+</html>`
+
+  writeFileSync(join(OUT, 'random.html'), randomHtml)
+  console.log('  random (virtual)')
+
+  // Missing page - list all stub/broken links
+  const missingList = Array.from(missingSlugs)
+    .filter(s => !s.startsWith('log/')) // Exclude log stubs
+    .sort()
+    .map(slug => {
+      const bl = backlinks.get(slug) || []
+      return { slug, backlinks: bl }
+    })
+
+  const missingHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Missing — Garden</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="site-name">Garden</a>
+  </header>
+  <main class="page virtual-page">
+    <article>
+      <h1>Missing Notes</h1>
+      <p class="virtual-description">Notes that are linked to but don't exist yet. These signal intent—future notes waiting to be written.</p>
+      ${missingList.length > 0 ? `
+      <ul class="virtual-list missing-list">
+        ${missingList.map(({ slug, backlinks: bl }) => {
+          const linkedFrom = bl.slice(0, 3).map(b =>
+            `<a href="/${b.sourceSlug}.html">${pages.get(b.sourceSlug)?.meta.title || b.sourceSlug}</a>`
+          ).join(', ')
+          const more = bl.length > 3 ? ` +${bl.length - 3} more` : ''
+          return `<li>
+            <a href="/${slug}.html" class="broken">${slug}</a>
+            <span class="virtual-meta">← ${linkedFrom}${more}</span>
+          </li>`
+        }).join('\n        ')}
+      </ul>
+      ` : '<p class="stub-notice">No missing notes. All links resolve!</p>'}
+    </article>
+  </main>
+  <footer class="site-footer">
+    <a href="/edit.html">Create New</a>
+  </footer>
+</body>
+</html>`
+
+  writeFileSync(join(OUT, 'missing.html'), missingHtml)
+  console.log('  missing (virtual)')
+
+  console.log(`\nBuilt ${pages.size} pages, ${stubCount} stubs, ${logCount} log pages, 3 virtual pages`)
 }
 
 build()
