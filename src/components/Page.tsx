@@ -131,6 +131,7 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
                 const extensions = [
                   EditorView.editable.of(false),
                   EditorState.readOnly.of(true),
+                  EditorView.lineWrapping,
                   lineNumbers(),
                   syntaxHighlighting(defaultHighlightStyle),
                   EditorView.theme({
