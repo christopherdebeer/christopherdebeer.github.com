@@ -64,6 +64,25 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
         <footer className="site-footer">
           <a href={`/edit.html?file=${srcPath}`}>Edit</a>
         </footer>
+        {/* Client-side viewers */}
+        <script type="module" dangerouslySetInnerHTML={{ __html: `
+          // Mermaid diagrams
+          const mermaidBlocks = document.querySelectorAll('.viewer-mermaid');
+          if (mermaidBlocks.length > 0) {
+            import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs')
+              .then(({ default: mermaid }) => {
+                mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+                mermaidBlocks.forEach(async (block, i) => {
+                  const source = block.querySelector('.viewer-source');
+                  const target = block.querySelector('.viewer-target');
+                  if (source && target) {
+                    const { svg } = await mermaid.render('mermaid-' + i, source.textContent);
+                    target.innerHTML = svg;
+                  }
+                });
+              });
+          }
+        `}} />
       </body>
     </html>
   )

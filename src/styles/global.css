@@ -938,3 +938,146 @@ li:last-child {
     padding-top: var(--space-3);
   }
 }
+
+/* ========================================
+   Code block viewers (dotlit-inspired)
+   ======================================== */
+
+/* Base code block styling */
+.code-block {
+  margin: var(--space-4) 0;
+}
+
+.code-block.collapsed {
+  max-height: 100px;
+  overflow: hidden;
+  position: relative;
+}
+
+.code-block.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, var(--bg));
+}
+
+.code-block.output {
+  border-left: 3px solid var(--accent);
+}
+
+.code-block.transcluded {
+  border-left: 3px solid var(--border-bold);
+}
+
+/* CSV Table viewer */
+.viewer-csv {
+  overflow-x: auto;
+}
+
+.csv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.csv-table th,
+.csv-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border: 1px solid var(--border);
+}
+
+.csv-table th {
+  background: var(--bg-elevated);
+  font-weight: 600;
+}
+
+.csv-table tr:hover td {
+  background: var(--bg-elevated);
+}
+
+/* JSON viewer */
+.json-viewer {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: var(--space-3);
+  overflow-x: auto;
+  font-size: 0.8125rem;
+}
+
+.json-viewer.json-error {
+  border-color: var(--broken);
+}
+
+/* SVG viewer */
+.svg-viewer {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.svg-viewer svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* HTML viewer */
+.html-viewer {
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+/* Markdown viewer */
+.md-viewer {
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.md-viewer p:last-child {
+  margin-bottom: 0;
+}
+
+/* Mermaid diagram viewer */
+.viewer-mermaid {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.viewer-mermaid .viewer-target {
+  max-width: 100%;
+}
+
+.viewer-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tagged code blocks */
+.code-block[class*="tag-"] {
+  position: relative;
+}
+
+/* Specific tags */
+.tag-example {
+  border-left: 3px solid #4caf50;
+}
+
+.tag-warning {
+  border-left: 3px solid #ff9800;
+}
+
+.tag-deprecated {
+  opacity: 0.6;
+}
