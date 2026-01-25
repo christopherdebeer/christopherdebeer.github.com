@@ -156,11 +156,11 @@ export function Page({ title, content, meta, slug, backlinks }: PageProps) {
                   extensions,
                 });
 
-                // Replace pre with CodeMirror
+                // Replace pre with CodeMirror (insert after pre, before footer)
                 pre.style.display = 'none';
                 const editorDiv = document.createElement('div');
                 editorDiv.className = 'cm-editor-wrapper';
-                block.appendChild(editorDiv);
+                pre.insertAdjacentElement('afterend', editorDiv);
 
                 new EditorView({
                   state: editorState,
