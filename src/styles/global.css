@@ -1165,3 +1165,110 @@ li:last-child {
   color: var(--fg-muted);
   font-style: italic;
 }
+
+/* ========================================
+   Anchor target highlighting
+   ======================================== */
+
+/* Highlight targeted sections/headings */
+:target {
+  scroll-margin-top: var(--space-4);
+}
+
+h1:target,
+h2:target,
+h3:target,
+h4:target,
+h5:target,
+h6:target {
+  background: linear-gradient(90deg, #fff3cd 0%, transparent 100%);
+  margin-left: calc(-1 * var(--space-2));
+  padding-left: var(--space-2);
+  animation: highlight-fade 3s ease-out forwards;
+}
+
+@keyframes highlight-fade {
+  0% {
+    background: linear-gradient(90deg, #fff3cd 0%, transparent 100%);
+  }
+  70% {
+    background: linear-gradient(90deg, #fff3cd 0%, transparent 100%);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  h1:target,
+  h2:target,
+  h3:target,
+  h4:target,
+  h5:target,
+  h6:target {
+    background: linear-gradient(90deg, rgba(255, 193, 7, 0.2) 0%, transparent 100%);
+  }
+
+  @keyframes highlight-fade {
+    0% {
+      background: linear-gradient(90deg, rgba(255, 193, 7, 0.2) 0%, transparent 100%);
+    }
+    70% {
+      background: linear-gradient(90deg, rgba(255, 193, 7, 0.2) 0%, transparent 100%);
+    }
+    100% {
+      background: transparent;
+    }
+  }
+}
+
+/* ========================================
+   Virtual pages (recent, random, missing)
+   ======================================== */
+
+.virtual-page .virtual-description {
+  color: var(--fg-secondary);
+  font-size: 1rem;
+  margin-bottom: var(--space-4);
+}
+
+.virtual-page .virtual-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.virtual-page .virtual-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.virtual-page .virtual-list li:last-child {
+  border-bottom: none;
+}
+
+.virtual-page .virtual-list li > a {
+  font-weight: 500;
+  font-size: 1.0625rem;
+}
+
+.virtual-page .virtual-meta {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+
+.virtual-page .virtual-meta a {
+  color: var(--fg-muted);
+}
+
+.virtual-page .virtual-meta a:hover {
+  color: var(--accent);
+}
+
+.virtual-page .missing-list li > a.broken {
+  color: var(--broken);
+}
