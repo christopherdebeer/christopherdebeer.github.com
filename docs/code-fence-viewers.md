@@ -97,7 +97,24 @@ Pull content from other files using `< path` or `< [[slug]]`:
 
 ### Section transclusion
 
-Pull only a specific section with `< [[slug#section]]` or `< path#section`.
+Pull only a specific section with `< [[slug#section]]`:
+
+```md < [[log-captures-fleeting-thoughts#the-problem]]
+```
+
+### Virtual pages
+
+Use `[[today]]`, `[[yesterday]]`, `[[this-week]]`, `[[this-month]]`, or `[[this-year]]` as shorthand for log pages:
+
+- Link to today's log: [[today]]
+- Transclude this week: `< [[this-week]]`
+
+### Raw transclusion
+
+Add `!raw` to show transcluded content as code instead of rendered:
+
+```md !raw < [[literate-programming]]
+```
 
 ## DSL Syntax
 

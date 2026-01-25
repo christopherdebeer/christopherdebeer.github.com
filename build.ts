@@ -12,6 +12,76 @@ import { buildViewers as customBuildViewers, clientViewers as customClientViewer
 const SRC = './docs'
 const OUT = './dist'
 
+// Global state for build context (needed by renderer)
+let currentFileDir = SRC
+let currentAllSlugs: Set<string> = new Set()
+
+// ============================================================================
+// Virtual page resolution
+// ============================================================================
+
+function resolveVirtualSlug(slug: string): string {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+
+  switch (slug.toLowerCase()) {
+    case 'today':
+      return `log/${yyyy}-${mm}-${dd}`
+    case 'yesterday': {
+      const yesterday = new Date(now)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const y = yesterday.getFullYear()
+      const m = String(yesterday.getMonth() + 1).padStart(2, '0')
+      const d = String(yesterday.getDate()).padStart(2, '0')
+      return `log/${y}-${m}-${d}`
+    }
+    case 'this-week': {
+      const weekNum = getWeekNumber(now)
+      return `log/${yyyy}-w${String(weekNum).padStart(2, '0')}`
+    }
+    case 'this-month':
+      return `log/${yyyy}-${mm}`
+    case 'this-year':
+      return `log/${yyyy}`
+    default:
+      return slug
+  }
+}
+
+// Helper to get week number (defined early for virtual slugs)
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+// Convert [[wiki-links]] to HTML links (used by viewers)
+function convertLinksInContent(content: string, allSlugs: Set<string>): string {
+  return content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
+    const parts = link.split('|')
+    let slug = parts[0].trim()
+    const text = (parts[1] || parts[0]).trim()
+
+    // Handle section links
+    let section = ''
+    const sectionMatch = slug.match(/^(.+?)#(.+)$/)
+    if (sectionMatch) {
+      slug = sectionMatch[1]
+      section = '#' + sectionMatch[2]
+    }
+
+    // Resolve virtual slugs
+    slug = resolveVirtualSlug(slug)
+    const exists = allSlugs.has(slug) || slug.startsWith('log/')
+    const cls = exists ? '' : ' class="broken"'
+    return `<a href="/${slug}.html${section}"${cls}>${text}</a>`
+  })
+}
+
 // ============================================================================
 // Code fence metadata parser (dotlit-inspired DSL)
 // ============================================================================
@@ -159,9 +229,11 @@ const BUILD_VIEWERS: Record<string, (content: string, meta: CodeMeta) => string>
     return `<div class="html-viewer">${content}</div>`
   },
 
-  // Markdown rendered inline
+  // Markdown rendered inline (with wikilink support)
   md: (content) => {
-    const html = marked.parse(content) as string
+    // Convert wikilinks before parsing markdown
+    const withLinks = convertLinksInContent(content, currentAllSlugs)
+    const html = marked.parse(withLinks) as string
     return `<div class="md-viewer">${html}</div>`
   },
 
@@ -229,29 +301,26 @@ function parseTranscludeSource(source: string): TranscludeTarget {
   // Check for [[slug]] or [[slug#section]] syntax (raw, before link conversion)
   const slugMatch = source.match(/^\[\[([^\]#]+)(?:#([^\]]+))?\]\]$/)
   if (slugMatch) {
+    // Resolve virtual slugs like [[today]], [[this-week]]
+    const resolvedPath = resolveVirtualSlug(slugMatch[1])
     return {
-      path: slugMatch[1],
+      path: resolvedPath,
       section: slugMatch[2],
       isSlug: true
     }
   }
 
   // Check for converted HTML link (when wikilinks were converted before code fence parsing)
-  // e.g., <a href="/slug.html">slug</a> or <a href="/slug.html" class="broken">slug</a>
-  const htmlLinkMatch = source.match(/<a href="\/([^".]+)\.html"[^>]*>([^<]+)<\/a>/)
+  // e.g., <a href="/slug.html">slug</a> or <a href="/slug.html#section" class="broken">slug</a>
+  const htmlLinkMatch = source.match(/<a href="\/([^"#]+)\.html(?:#([^"]*))?"[^>]*>([^<]+)<\/a>/)
   if (htmlLinkMatch) {
-    const slug = htmlLinkMatch[1]
-    // Check if there's a section in the slug
-    const sectionMatch = slug.match(/^(.+?)#([^#]+)$/)
-    if (sectionMatch) {
-      return {
-        path: sectionMatch[1],
-        section: sectionMatch[2],
-        isSlug: true
-      }
-    }
+    let slug = htmlLinkMatch[1]
+    const section = htmlLinkMatch[2]
+    // Resolve virtual slugs
+    slug = resolveVirtualSlug(slug)
     return {
       path: slug,
+      section,
       isSlug: true
     }
   }
@@ -269,15 +338,24 @@ function parseTranscludeSource(source: string): TranscludeTarget {
   return { path: source, isSlug: false }
 }
 
+// Result of transclusion with metadata
+interface TranscludeResult {
+  content: string
+  isSlug: boolean
+  fileExt?: string
+}
+
 // Try to read a file for transclusion, returns null if not found
-function readTranscludeSource(sourcePath: string, currentDir: string, allSlugs?: Set<string>): string | null {
+function readTranscludeSource(sourcePath: string, currentDir: string): TranscludeResult | null {
   const target = parseTranscludeSource(sourcePath)
   let fullPath: string
   let content: string | null = null
+  let fileExt: string | undefined
 
   if (target.isSlug) {
     // Resolve slug to docs/{slug}.md
     fullPath = join(SRC, `${target.path}.md`)
+    fileExt = 'md'
     if (existsSync(fullPath)) {
       const raw = readFileSync(fullPath, 'utf8')
       // Strip frontmatter, return body only
@@ -291,6 +369,10 @@ function readTranscludeSource(sourcePath: string, currentDir: string, allSlugs?:
     } else {
       fullPath = join(currentDir, target.path)
     }
+
+    // Get file extension
+    const extMatch = target.path.match(/\.([^.]+)$/)
+    fileExt = extMatch ? extMatch[1] : undefined
 
     try {
       if (existsSync(fullPath)) {
@@ -307,21 +389,20 @@ function readTranscludeSource(sourcePath: string, currentDir: string, allSlugs?:
     }
   }
 
+  if (content === null) return null
+
   // Extract section if specified
-  if (content && target.section) {
+  if (target.section) {
     const sectionContent = extractSection(content, target.section)
     if (sectionContent) {
       content = sectionContent
     } else {
-      return `[Section "${target.section}" not found]`
+      return { content: `[Section "${target.section}" not found]`, isSlug: target.isSlug, fileExt }
     }
   }
 
-  return content
+  return { content, isSlug: target.isSlug, fileExt }
 }
-
-// Current file being processed (for transclusion context)
-let currentFileDir = SRC
 
 // Custom renderer for code blocks with viewer support (marked v15 signature)
 const renderer = {
@@ -332,14 +413,25 @@ const renderer = {
     const metaStr = parts.slice(1).join(' ') || undefined
 
     const meta = parseCodeMeta(langPart, metaStr)
-    const viewer = getViewer(meta)
+    let viewer = getViewer(meta)
 
     // Handle transclusion - read content from external file
     let content = text
+    let transcludeResult: TranscludeResult | null = null
     if (meta.source) {
-      const transcluded = readTranscludeSource(meta.source, currentFileDir)
-      if (transcluded !== null) {
-        content = transcluded
+      transcludeResult = readTranscludeSource(meta.source, currentFileDir)
+      if (transcludeResult !== null) {
+        content = transcludeResult.content
+
+        // Auto-detect language from transcluded file if not specified
+        if (!meta.lang && transcludeResult.fileExt) {
+          meta.lang = transcludeResult.fileExt
+        }
+
+        // For slug transclusions, default to markdown rendering (unless overridden)
+        if (transcludeResult.isSlug && !viewer && !meta.directives.includes('raw')) {
+          viewer = 'md'
+        }
       } else {
         // Show error if transclusion failed
         content = `[Transclusion failed: ${meta.source} not found]`
@@ -377,15 +469,6 @@ marked.use({ renderer })
 // ============================================================================
 // Date utilities for log system
 // ============================================================================
-
-// Get ISO week number for a date
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-}
 
 // Parse a date string (YYYY-MM-DD) into DateInfo
 function parseDateInfo(dateStr: string): DateInfo | null {
@@ -462,28 +545,49 @@ const toSlug = (p: string): string => relative(SRC, p).replace(/\.md$/, '')
 // Convert slug to output path
 const toOut = (slug: string): string => join(OUT, slug + '.html')
 
-// Extract [[wiki-links]] from content
+// Extract [[wiki-links]] from content (resolves virtual slugs, strips sections)
 function extractLinks(content: string): LinkInfo[] {
   const links: LinkInfo[] = []
   content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
     const parts = link.split('|')
-    const slug = parts[0].trim()
+    let slug = parts[0].trim()
     const linkText = parts[1]?.trim() || null
+
+    // Strip section for backlinks (link to page, not section)
+    const sectionIdx = slug.indexOf('#')
+    if (sectionIdx > 0) {
+      slug = slug.substring(0, sectionIdx)
+    }
+
+    // Resolve virtual slugs
+    slug = resolveVirtualSlug(slug)
+
     links.push({ slug, linkText })
     return ''
   })
   return links
 }
 
-// Convert [[wiki-links]] to HTML links
+// Convert [[wiki-links]] to HTML links (supports virtual slugs and sections)
 function convertLinks(content: string, allSlugs: Set<string>): string {
   return content.replace(/\[\[([^\]]+)\]\]/g, (_, link: string) => {
     const parts = link.split('|')
-    const slug = parts[0].trim()
+    let slug = parts[0].trim()
     const text = (parts[1] || parts[0]).trim()
-    const exists = allSlugs.has(slug)
+
+    // Handle section links: [[slug#section]] -> slug.html#section
+    let section = ''
+    const sectionMatch = slug.match(/^(.+?)#(.+)$/)
+    if (sectionMatch) {
+      slug = sectionMatch[1]
+      section = '#' + sectionMatch[2]
+    }
+
+    // Resolve virtual slugs like [[today]], [[this-week]]
+    slug = resolveVirtualSlug(slug)
+    const exists = allSlugs.has(slug) || slug.startsWith('log/')
     const cls = exists ? '' : ' class="broken"'
-    return `<a href="/${slug}.html"${cls}>${text}</a>`
+    return `<a href="/${slug}.html${section}"${cls}>${text}</a>`
   })
 }
 
@@ -522,6 +626,9 @@ function build(): void {
     const links = extractLinks(body)
     pages.set(slug, { slug, meta, body, links, file })
   }
+
+  // Set global slug reference for viewers
+  currentAllSlugs = allSlugs
 
   // Backlink entry: source page slug + the link text used (if any)
   interface BacklinkEntry {
