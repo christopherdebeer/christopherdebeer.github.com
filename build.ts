@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, rmSync, existsSync } from 'fs'
 import { join, dirname, relative } from 'path'
-import { marked } from 'marked'
+import { marked, Tokens } from 'marked'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Page } from './src/components/Page.js'
@@ -10,6 +10,250 @@ import type { BacklinkItem, PageMeta, PageData, LinkInfo, LogPageMeta, DateInfo 
 
 const SRC = './docs'
 const OUT = './dist'
+
+// ============================================================================
+// Code fence metadata parser (dotlit-inspired DSL)
+// ============================================================================
+
+interface CodeMeta {
+  lang: string
+  filename?: string
+  uri?: string
+  tags: string[]           // #tag
+  directives: string[]     // !directive
+  attrs: Record<string, string>  // key=value
+  source?: string          // < path (transclusion)
+  output?: string          // > lang (output format)
+  isOutput: boolean        // starts with >
+  raw: string
+}
+
+// Parse code fence meta string into structured CodeMeta
+function parseCodeMeta(lang: string | undefined, meta: string | undefined): CodeMeta {
+  const raw = `${lang || ''} ${meta || ''}`.trim()
+  const isOutput = raw.startsWith('>')
+
+  let input = raw
+  let source: string | undefined
+  let output: string | undefined
+
+  // Handle output prefix (>lang)
+  if (isOutput) {
+    input = raw.slice(1).trim()
+  }
+
+  // Handle source transclusion (< path)
+  if (input.includes(' < ')) {
+    const [before, after] = input.split(' < ')
+    input = before.trim()
+    source = after.trim()
+  }
+
+  // Handle output format (> lang)
+  if (input.includes(' > ')) {
+    const [before, after] = input.split(' > ')
+    input = before.trim()
+    output = after.trim()
+  }
+
+  // Parse parts
+  const parts = input.split(/\s+/).filter(Boolean)
+  const result: CodeMeta = {
+    lang: '',
+    tags: [],
+    directives: [],
+    attrs: {},
+    isOutput,
+    raw,
+  }
+
+  if (source) result.source = source
+  if (output) result.output = output
+
+  parts.forEach((part, i) => {
+    if (i === 0) {
+      result.lang = part
+    } else if (part.startsWith('#')) {
+      result.tags.push(part.slice(1))
+    } else if (part.startsWith('!')) {
+      result.directives.push(part.slice(1))
+    } else if (part.includes('=')) {
+      const [key, ...rest] = part.split('=')
+      result.attrs[key] = rest.join('=')
+    } else if (i === 1) {
+      // Second position is filename or URI
+      if (part.startsWith('http') || part.startsWith('//')) {
+        result.uri = part
+      } else {
+        result.filename = part
+      }
+    }
+  })
+
+  return result
+}
+
+// Check if a viewer should be applied to this code block
+function getViewer(meta: CodeMeta): string | null {
+  // Explicit viewer attribute takes precedence
+  if (meta.attrs.viewer) return meta.attrs.viewer
+
+  // Output cells use lang as viewer
+  if (meta.isOutput) return meta.lang
+
+  // !inline directive triggers viewer
+  if (meta.directives.includes('inline')) return meta.lang
+
+  return null
+}
+
+// Built-in viewers that transform at build time
+const BUILD_VIEWERS: Record<string, (content: string, meta: CodeMeta) => string> = {
+  // CSV to HTML table
+  csv: (content, meta) => {
+    const lines = content.trim().split('\n')
+    if (lines.length === 0) return '<p>Empty CSV</p>'
+
+    const hasHeader = !meta.directives.includes('noheader')
+    const rows = lines.map(line => {
+      // Simple CSV parsing (doesn't handle quoted commas)
+      return line.split(',').map(cell => cell.trim())
+    })
+
+    let html = '<table class="csv-table">'
+    if (hasHeader && rows.length > 0) {
+      html += '<thead><tr>'
+      rows[0].forEach(cell => { html += `<th>${escapeHtml(cell)}</th>` })
+      html += '</tr></thead>'
+      rows.shift()
+    }
+    html += '<tbody>'
+    rows.forEach(row => {
+      html += '<tr>'
+      row.forEach(cell => { html += `<td>${escapeHtml(cell)}</td>` })
+      html += '</tr>'
+    })
+    html += '</tbody></table>'
+    return html
+  },
+
+  // JSON formatted display
+  json: (content, meta) => {
+    try {
+      const parsed = JSON.parse(content)
+      const formatted = JSON.stringify(parsed, null, 2)
+      return `<pre class="json-viewer"><code>${escapeHtml(formatted)}</code></pre>`
+    } catch (e) {
+      return `<pre class="json-viewer json-error"><code>${escapeHtml(content)}</code></pre>`
+    }
+  },
+
+  // SVG inline
+  svg: (content) => {
+    return `<div class="svg-viewer">${content}</div>`
+  },
+
+  // HTML inline (careful!)
+  html: (content) => {
+    return `<div class="html-viewer">${content}</div>`
+  },
+
+  // Markdown rendered inline
+  md: (content) => {
+    const html = marked.parse(content) as string
+    return `<div class="md-viewer">${html}</div>`
+  },
+}
+
+// Client-side viewers (render placeholder with data)
+const CLIENT_VIEWERS = ['mermaid', 'graph', 'dot', 'vega']
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+// Try to read a file for transclusion, returns null if not found
+function readTranscludeSource(sourcePath: string, currentDir: string): string | null {
+  // Resolve relative to docs folder or absolute
+  let fullPath: string
+  if (sourcePath.startsWith('/')) {
+    fullPath = join(SRC, sourcePath)
+  } else {
+    fullPath = join(currentDir, sourcePath)
+  }
+
+  try {
+    if (existsSync(fullPath)) {
+      return readFileSync(fullPath, 'utf8')
+    }
+    // Try with docs prefix if not found
+    const withDocs = join(SRC, sourcePath)
+    if (existsSync(withDocs)) {
+      return readFileSync(withDocs, 'utf8')
+    }
+  } catch {
+    // File not readable
+  }
+  return null
+}
+
+// Current file being processed (for transclusion context)
+let currentFileDir = SRC
+
+// Custom renderer for code blocks with viewer support (marked v15 signature)
+const renderer = {
+  code({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
+    // In marked v15, lang contains the full info string (lang + meta)
+    const parts = (lang || '').split(/\s+/)
+    const langPart = parts[0] || undefined
+    const metaStr = parts.slice(1).join(' ') || undefined
+
+    const meta = parseCodeMeta(langPart, metaStr)
+    const viewer = getViewer(meta)
+
+    // Handle transclusion - read content from external file
+    let content = text
+    if (meta.source) {
+      const transcluded = readTranscludeSource(meta.source, currentFileDir)
+      if (transcluded !== null) {
+        content = transcluded
+      } else {
+        // Show error if transclusion failed
+        content = `[Transclusion failed: ${meta.source} not found]`
+      }
+    }
+
+    // Build CSS classes
+    const classes = ['code-block']
+    if (meta.tags.length) classes.push(...meta.tags.map(t => `tag-${t}`))
+    if (meta.directives.includes('collapse')) classes.push('collapsed')
+    if (meta.isOutput) classes.push('output')
+    if (meta.source) classes.push('transcluded')
+
+    // Handle build-time viewers
+    if (viewer && BUILD_VIEWERS[viewer]) {
+      const viewerHtml = BUILD_VIEWERS[viewer](content, meta)
+      return `<div class="${classes.join(' ')} viewer-${viewer}">${viewerHtml}</div>`
+    }
+
+    // Handle client-side viewers (mermaid, etc)
+    if (viewer && CLIENT_VIEWERS.includes(viewer)) {
+      const escaped = escapeHtml(content)
+      return `<div class="${classes.join(' ')} viewer-${viewer}" data-viewer="${viewer}"><pre class="viewer-source" style="display:none">${escaped}</pre><div class="viewer-target"></div></div>`
+    }
+
+    // Default code rendering with syntax highlighting class
+    const langClass = meta.lang ? ` language-${meta.lang}` : ''
+    return `<pre class="${classes.join(' ')}"><code class="hljs${langClass}">${escapeHtml(content)}</code></pre>`
+  }
+}
+
+// Apply the custom renderer
+marked.use({ renderer })
 
 // ============================================================================
 // Date utilities for log system
@@ -202,6 +446,8 @@ function build(): void {
   // Render each page
   for (const [slug, page] of pages) {
     const converted = convertLinks(page.body, allSlugs)
+    // Set context for transclusion resolution
+    currentFileDir = dirname(page.file)
     const html = marked.parse(converted) as string
     const title = page.meta.title || slug.split('/').pop() || slug
     const bl = backlinks.get(slug) || []
