@@ -1,10 +1,10 @@
 ---
 name: digital-garden
-description: A framework for creating and maintaining digital gardens - networks of atomic, interconnected notes that evolve over time. Use this skill when creating knowledge bases, personal wikis, evergreen notes, or any system where ideas should compound through linking. Triggers on tasks involving note creation, wiki-links, knowledge management, or Zettelkasten-style writing.
+description: A framework for creating and maintaining digital gardens - networks of atomic, interconnected notes that evolve over time. Use this skill when creating knowledge bases, personal wikis, evergreen notes, or any system where ideas should compound through linking.
 license: MIT
 metadata:
   author: christopherdebeer
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
 # Digital Garden Framework
@@ -30,19 +30,13 @@ One idea per note. The title captures the complete claim.
 
 **Why:** Atomicity forces clarity. Large notes hide confusion. They let you gesture at ideas without pinning them down.
 
-Benefits:
-- Titles become meaningful (each is a claim)
-- Links become precise (point to specific ideas)
-- Reuse becomes possible (same concept, different contexts)
-- Gaps become visible (missing atoms for synthesis)
-
 ### 2. Linked
 
 Every note connects. Isolation is death. Create the link first, write the note second.
 
 **Why:** Bi-directional links create emergent structure. When A links to B, B knows about A. No need to pre-organize—link patterns reveal clusters naturally.
 
-Rules:
+**Rules:**
 - Link liberally
 - Broken links are fine—they surface what's missing
 - Links signal intent before content exists
@@ -53,25 +47,20 @@ Notes grow. Seedlings become evergreen. Update > append > new file.
 
 **Why:** A note's value compounds with each revision. The practice transforms note-taking from storage into thinking.
 
-Status levels:
-- **seedling** - rough, incomplete, just planted
-- **budding** - developing, has structure, needs work
-- **evergreen** - mature, stable, reliably useful
-
 ### 4. Standalone
 
 Each note is self-sufficient. Synthesis notes link to atoms, never replace them.
 
-**Why:** Notes remain useful because they capture refined understanding, not raw material. Traditional notes decay; evergreen notes compound.
+**Why:** Notes remain useful because they capture refined understanding, not raw material.
 
 ## File Format
 
-### Frontmatter (Required)
+### Frontmatter
 
 ```yaml
 ---
 title: Note title as complete thought
-status: seedling | budding | evergreen
+status: seedling
 created: YYYY-MM-DD
 ---
 ```
@@ -83,16 +72,74 @@ created: YYYY-MM-DD
 - No special characters, no spaces
 - Title in frontmatter can differ (title is for display)
 
-Example: `src/spaced-repetition-works.md` → `[[spaced-repetition-works]]`
+Example: `docs/spaced-repetition-works.md` → `[[spaced-repetition-works]]`
+
+## Linking
 
 ### Wiki-Links
 
 ```markdown
 [[slug]]                    # Basic link
 [[slug|display text]]       # Link with custom text
+[[slug#section]]            # Link to section
 ```
 
 Broken links are valid and encouraged—they signal intent.
+
+### Transclusion
+
+Embed content from other notes inline:
+
+```
+```md < [[slug]]
+```
+```
+
+This renders the referenced note's content and creates a backlink. Works with:
+- Regular notes: `[[any-note]]`
+- Sections: `[[note#section-heading]]`
+- Virtual pages: `[[recent]]`, `[[random]]`, `[[missing]]`
+
+## Status
+
+Status is flexible—any text becomes an implicit wikilink:
+
+```yaml
+status: seedling      # Links to /seedling.html
+status: draft         # Links to /draft.html
+status: needs-review  # Links to /needs-review.html
+```
+
+Common conventions (define your own):
+- **seedling** - rough, incomplete, just planted
+- **budding** - developing, has structure, needs work
+- **evergreen** - mature, stable, reliably useful
+
+Create notes for status concepts to define what they mean in your garden. The status becomes part of the link graph—you can see all seedlings by visiting the seedling page's backlinks.
+
+## Virtual Pages
+
+Generated at build time, linkable and transcludable:
+
+| Slug | Content |
+|------|---------|
+| `[[recent]]` | 10 most recently created/updated notes |
+| `[[random]]` | 5 random notes (static per build) |
+| `[[missing]]` | All broken links awaiting content |
+
+## Temporal Navigation
+
+The log system generates pages from `created`/`updated` dates:
+
+- `/log.html` - index by year
+- `/log/2026.html` - year view
+- `/log/2026-01.html` - month view
+- `/log/2026-w04.html` - week view
+- `/log/2026-01-25.html` - day view
+
+Virtual slugs resolve to current period:
+- `[[today]]`, `[[yesterday]]`
+- `[[this-week]]`, `[[this-month]]`, `[[this-year]]`
 
 ## Title Guidelines
 
@@ -146,17 +193,18 @@ See also: [[desirable-difficulties]], [[generation-effect]]
 
 ## Build System
 
-After creating or editing notes in `src/`:
+After creating or editing notes in `docs/`:
 
 ```bash
 npm run build
 ```
 
-This generates `docs/*.html` with:
-- Rendered markdown
+This generates `dist/*.html` with:
+- Rendered markdown with syntax highlighting
 - Resolved wiki-links (broken links styled distinctly)
 - Auto-generated backlinks section
-- Status indicators
+- Status as link to concept page
+- Transcluded content with source attribution
 
 ## Anti-Patterns
 
@@ -180,7 +228,8 @@ Avoid these common mistakes:
 |---------|--------|
 | Filename | `kebab-case-slug.md` |
 | Title | Complete assertion |
-| Status | `seedling` / `budding` / `evergreen` |
-| Link | `[[slug]]` or `[[slug|text]]` |
-| Location | `src/` directory |
+| Status | Any text (implicit wikilink) |
+| Link | `[[slug]]` or `[[slug\|text]]` |
+| Transclude | ` ```md < [[slug]] ``` ` |
+| Location | `docs/` directory |
 | Build | `npm run build` |
