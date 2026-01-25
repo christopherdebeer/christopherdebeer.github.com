@@ -7,6 +7,7 @@ import { Page } from './src/components/Page.js'
 import { StubPage } from './src/components/StubPage.js'
 import { LogPage } from './src/components/LogPage.js'
 import type { BacklinkItem, PageMeta, PageData, LinkInfo, LogPageMeta, DateInfo } from './src/components/types.js'
+import { buildViewers as customBuildViewers, clientViewers as customClientViewers } from './src/viewers/index.js'
 
 const SRC = './docs'
 const OUT = './dist'
@@ -163,10 +164,13 @@ const BUILD_VIEWERS: Record<string, (content: string, meta: CodeMeta) => string>
     const html = marked.parse(content) as string
     return `<div class="md-viewer">${html}</div>`
   },
+
+  // Merge custom build viewers
+  ...customBuildViewers,
 }
 
 // Client-side viewers (render placeholder with data)
-const CLIENT_VIEWERS = ['mermaid', 'graph', 'dot', 'vega']
+const CLIENT_VIEWERS = ['mermaid', 'graph', 'dot', 'vega', ...Object.keys(customClientViewers)]
 
 function escapeHtml(text: string): string {
   return text
@@ -176,29 +180,144 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
-// Try to read a file for transclusion, returns null if not found
-function readTranscludeSource(sourcePath: string, currentDir: string): string | null {
-  // Resolve relative to docs folder or absolute
-  let fullPath: string
-  if (sourcePath.startsWith('/')) {
-    fullPath = join(SRC, sourcePath)
-  } else {
-    fullPath = join(currentDir, sourcePath)
+// Extract a section from markdown content by heading
+function extractSection(content: string, sectionName: string): string | null {
+  const lines = content.split('\n')
+  const sectionSlug = sectionName.toLowerCase().replace(/\s+/g, '-')
+
+  let inSection = false
+  let sectionLevel = 0
+  const sectionLines: string[] = []
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
+
+    if (headingMatch) {
+      const level = headingMatch[1].length
+      const headingText = headingMatch[2]
+      const headingSlug = headingText.toLowerCase().replace(/\s+/g, '-')
+
+      if (!inSection && headingSlug === sectionSlug) {
+        inSection = true
+        sectionLevel = level
+        sectionLines.push(line)
+        continue
+      }
+
+      // End section when we hit same or higher level heading
+      if (inSection && level <= sectionLevel) {
+        break
+      }
+    }
+
+    if (inSection) {
+      sectionLines.push(line)
+    }
   }
 
-  try {
-    if (existsSync(fullPath)) {
-      return readFileSync(fullPath, 'utf8')
+  return sectionLines.length > 0 ? sectionLines.join('\n') : null
+}
+
+// Parse transclusion source: file path, [[slug]], or [[slug#section]]
+interface TranscludeTarget {
+  path: string
+  section?: string
+  isSlug: boolean
+}
+
+function parseTranscludeSource(source: string): TranscludeTarget {
+  // Check for [[slug]] or [[slug#section]] syntax (raw, before link conversion)
+  const slugMatch = source.match(/^\[\[([^\]#]+)(?:#([^\]]+))?\]\]$/)
+  if (slugMatch) {
+    return {
+      path: slugMatch[1],
+      section: slugMatch[2],
+      isSlug: true
     }
-    // Try with docs prefix if not found
-    const withDocs = join(SRC, sourcePath)
-    if (existsSync(withDocs)) {
-      return readFileSync(withDocs, 'utf8')
-    }
-  } catch {
-    // File not readable
   }
-  return null
+
+  // Check for converted HTML link (when wikilinks were converted before code fence parsing)
+  // e.g., <a href="/slug.html">slug</a> or <a href="/slug.html" class="broken">slug</a>
+  const htmlLinkMatch = source.match(/<a href="\/([^".]+)\.html"[^>]*>([^<]+)<\/a>/)
+  if (htmlLinkMatch) {
+    const slug = htmlLinkMatch[1]
+    // Check if there's a section in the slug
+    const sectionMatch = slug.match(/^(.+?)#([^#]+)$/)
+    if (sectionMatch) {
+      return {
+        path: sectionMatch[1],
+        section: sectionMatch[2],
+        isSlug: true
+      }
+    }
+    return {
+      path: slug,
+      isSlug: true
+    }
+  }
+
+  // Check for path#section syntax
+  const pathMatch = source.match(/^(.+?)#([^#]+)$/)
+  if (pathMatch) {
+    return {
+      path: pathMatch[1],
+      section: pathMatch[2],
+      isSlug: false
+    }
+  }
+
+  return { path: source, isSlug: false }
+}
+
+// Try to read a file for transclusion, returns null if not found
+function readTranscludeSource(sourcePath: string, currentDir: string, allSlugs?: Set<string>): string | null {
+  const target = parseTranscludeSource(sourcePath)
+  let fullPath: string
+  let content: string | null = null
+
+  if (target.isSlug) {
+    // Resolve slug to docs/{slug}.md
+    fullPath = join(SRC, `${target.path}.md`)
+    if (existsSync(fullPath)) {
+      const raw = readFileSync(fullPath, 'utf8')
+      // Strip frontmatter, return body only
+      const match = raw.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/)
+      content = match ? match[1] : raw
+    }
+  } else {
+    // Resolve relative to docs folder or current directory
+    if (target.path.startsWith('/')) {
+      fullPath = join(SRC, target.path)
+    } else {
+      fullPath = join(currentDir, target.path)
+    }
+
+    try {
+      if (existsSync(fullPath)) {
+        content = readFileSync(fullPath, 'utf8')
+      } else {
+        // Try with docs prefix if not found
+        const withDocs = join(SRC, target.path)
+        if (existsSync(withDocs)) {
+          content = readFileSync(withDocs, 'utf8')
+        }
+      }
+    } catch {
+      // File not readable
+    }
+  }
+
+  // Extract section if specified
+  if (content && target.section) {
+    const sectionContent = extractSection(content, target.section)
+    if (sectionContent) {
+      content = sectionContent
+    } else {
+      return `[Section "${target.section}" not found]`
+    }
+  }
+
+  return content
 }
 
 // Current file being processed (for transclusion context)

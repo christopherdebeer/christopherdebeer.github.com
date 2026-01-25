@@ -59,6 +59,46 @@ This is **rendered markdown** inside a code block.
 - Great for examples
 ```
 
+## Custom Viewers
+
+Custom viewers live in `src/viewers/` and are automatically loaded.
+
+### Timeline Viewer
+
+```timeline !inline
+2024-01: Started garden project
+2024-03: Added wikilinks support
+2024-06: Implemented backlinks
+2024-12: Added log system
+2025-01: Integrated dotlit viewers
+```
+
+### TOC Viewer
+
+```toc !inline
+# Introduction
+## Getting Started
+### Installation
+### Configuration
+## Features
+### Wikilinks
+### Backlinks
+## Advanced
+```
+
+## Transclusion
+
+Pull content from other files using `< path` or `< [[slug]]`:
+
+### Slug-based transclusion
+
+```md < [[literate-programming]]
+```
+
+### Section transclusion
+
+Pull only a specific section with `< [[slug#section]]` or `< path#section`.
+
 ## DSL Syntax
 
 The code fence metadata DSL:
@@ -68,7 +108,9 @@ The code fence metadata DSL:
 - `#tag` - adds CSS class `tag-xyz`
 - `!directive` - controls rendering (`!inline`, `!collapse`)
 - `attr=value` - arbitrary attributes (`viewer=custom`)
-- `< path` - transclusion (read from file)
+- `< path` - file transclusion (read from file)
+- `< [[slug]]` - slug transclusion (read note body)
+- `< [[slug#section]]` - section transclusion
 - `> lang` - output format
 
 Example: `` ```csv data.csv #example !inline `` `
