@@ -782,6 +782,17 @@ function build(): void {
     // Extract both regular wikilinks and transclusion sources
     // Transclusion links first so they're preserved during deduplication (with their '(transcluded)' marker)
     const links = [...extractTransclusionLinks(body), ...extractLinks(body)]
+
+    // Status field is an implicit wikilink - extract it for backlinks/stubs
+    if (meta.status) {
+      // If status already has [[]], extract normally; otherwise treat whole value as slug
+      if (meta.status.includes('[[')) {
+        links.push(...extractLinks(meta.status))
+      } else {
+        links.push({ slug: meta.status, linkText: null })
+      }
+    }
+
     pages.set(slug, { slug, meta, body, links, file })
   }
 
@@ -856,10 +867,15 @@ function build(): void {
     const title = page.meta.title || slug.split('/').pop() || slug
     const bl = backlinks.get(slug) || []
 
-    // Convert status field wikilinks (e.g., "[[seedling]]" -> link)
-    const statusHtml = page.meta.status
-      ? convertLinksInContent(page.meta.status, allSlugs)
-      : undefined
+    // Convert status to wikilink automatically (unless it already contains [[)
+    // This makes all status values implicitly link to their concept page
+    let statusHtml: string | undefined
+    if (page.meta.status) {
+      const status = page.meta.status
+      // If already has wikilink syntax, use as-is; otherwise wrap in [[]]
+      const statusWithLink = status.includes('[[') ? status : `[[${status}]]`
+      statusHtml = convertLinksInContent(statusWithLink, allSlugs)
+    }
 
     const element = React.createElement(Page, {
       title,
